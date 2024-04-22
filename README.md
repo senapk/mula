@@ -20,6 +20,15 @@
 
 ## Instalação
 
+### Instalação no Windows
+
+Abra o power shell como administrador e execute o comando:
+
+```bash
+pip install mula
+```
+
+### Instalação no Linux
 ```bash
 
 pip install mula

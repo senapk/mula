@@ -69,15 +69,28 @@ class JsonVplLoader:
 
     # remote is like https://raw.githubusercontent.com/qxcodefup/moodle/master/base/
     @staticmethod
-    def load(target: str) -> JsonVPL:
+    def load_remote(target: str) -> JsonVPL:
 
         remote_url = Credentials.load_credentials().remote
-        url = os.path.join(remote_url, target + "/.cache/mapi.json")            
+        url = remote_url + "/" + target + "/.cache/mapi.json"
+        print("    - " + url)
         _fd, path = tempfile.mkstemp(suffix = "_" + target + '.json')
-        print("    - Loading from remote in"    + path + " ... ", end = "")
+        print("    - Loading in "    + path + " ... ", end = "")
         if JsonVplLoader.save_as(url, path):
             print("done")
             return JsonVplLoader._load_from_string(open(path).read())
         print("fail: invalid target " + target)
         exit(1)
 
+    @staticmethod
+    def load_local(target: str) -> JsonVPL:
+
+        path = os.path.join("base", target, ".cache", "mapi.json")
+        print("    - Loading from local in "    + path + " ... ", end = "")
+        if os.path.exists(path):
+            with open(path, "r") as file:
+                print("done")
+                return JsonVplLoader._load_from_string(file.read())
+        else:
+            print("fail: invalid target " + target)
+            exit(1)

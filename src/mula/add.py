@@ -5,14 +5,13 @@ from .bar import Bar
 from .json_tools import JsonVplLoader, JsonVPL
 from .structure_item import StructureItem
 from .param import CommonParam
+from .credentials import Credentials
 
 
 class Add:
     def __init__(self, section: Optional[int], param: CommonParam, structure=None):
         self.section: Optional[int] = 0 if section is None else section
-                
         self.param = param
-
         if structure is None:
             self.structure = StructureLoader.load()
         else:
@@ -94,7 +93,10 @@ class Add:
 
     def add_target(self, target: str):
         print("- Target: " + target)
-        vpl = JsonVplLoader.load(target)
+        if self.param.local:
+            vpl = JsonVplLoader.load_local(target)
+        else:
+            vpl = JsonVplLoader.load_remote(target)
         itens_label_match = self.structure.search_by_label(StructureItem.parse_label(vpl.title), self.section)
         item = None if len(itens_label_match) == 0 else itens_label_match[0]
         while True:

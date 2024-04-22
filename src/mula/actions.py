@@ -21,6 +21,9 @@ class Actions:
         param.content = True
         param.exec = True
 
+        if args.local:
+            param.local = True
+
         if args.visible is not None:
             param.visible = True if args.visible == 1 else False
       
@@ -43,8 +46,17 @@ class Actions:
         param.content= args.content
         param.exec = args.exec
 
+        if not args.duedate and not args.maxfiles and not args.content and not args.exec and not args.visible:
+            print("Nothing to update, please provide at least one action(--content, --duedate, --visible, ...")
+            return
+
+        if args.local:
+            param.local = True
+
         if args.visible is not None:
             param.visible = True if args.visible == 1 else False
+
+
 
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.sections, args.ids, args.labels, structure)

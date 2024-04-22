@@ -7,7 +7,7 @@ import sys
 from .actions import Actions
 from .credentials import Credentials
 from .moodle_api import MoodleAPI
-
+from .__init__ import __version__
 
 
 def main():
@@ -39,6 +39,8 @@ def main():
     parser = argparse.ArgumentParser(prog='mapi.py', description=desc, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-c', '--config', type=str, help="config file path")
     parser.add_argument('-t', '--timeout', type=int, help="max timeout to way moodle response")
+    parser.add_argument('-v', '--version', action="store_true", help="show version")
+    parser.add_argument('-l', '--local', action="store_true", help="search for mapi.json inside current directory")
 
     parser.add_argument("--username", "-u", type=str, help='username')
     parser.add_argument("--password", "-p", type=str, help="password")
@@ -67,6 +69,10 @@ def main():
     parser_update.set_defaults(func=Actions.update)
 
     args = parser.parse_args()
+
+    if args.version:
+        print(__version__)
+        sys.exit(0)
 
     if args.timeout is not None:
         MoodleAPI.default_timeout = args.timeout
