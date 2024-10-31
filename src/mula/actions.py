@@ -6,6 +6,7 @@ from .bar import Bar
 from .viewer import Viewer
 from .param import CommonParam
 
+import json
 from typing import Optional
 
 import os
@@ -68,6 +69,46 @@ class Actions:
         Update.from_remote(item_list, param, structure)
 
     @staticmethod
+    def unpack_json(json_file: str):
+        try:
+            data = json.loads(open(json_file).read())
+             
+            folder = json_file[:-5] + "_" + data["title"].replace(" ", "_").lower().replace("[", "-").replace("]", "-").replace("(", "_").replace(")", "_")
+            if os.path.exists(folder):
+                os.remove(folder)
+            os.mkdir(folder)
+            description = data["description"]
+            description_file = os.path.join(folder, "description.txt")
+            open(description_file, "w").write(description)
+            
+            for f in data["upload"]:
+                file_name = os.path.join(folder, f["name"])
+                open(file_name, "w").write(f["contents"])
+            for f in data["keep"]:
+                file_name = os.path.join(folder, f["name"])
+                open(file_name, "w").write(f["contents"])
+            for f in data["required"]:
+                file_name = os.path.join(folder, f["name"])
+                open(file_name, "w").write(f["contents"])
+            yaml_file = os.path.join(folder, "config.yaml")
+            with open(yaml_file, "w") as y:
+                y.write("upload:\n")
+                for f in data["upload"]:
+                    y.write("  - " + f'"{f["name"]}"\n')
+                y.write("keep:\n")
+                for f in data["keep"]:
+                    y.write("  - " + f'"{f["name"]}"\n')
+                y.write("required:\n")
+                for f in data["required"]:
+                    y.write("  - " + f'"{f["name"]}"\n')
+                
+        
+        except Exception as e:
+            print("Error unpacking json file", json_file)
+            print(e)
+            return
+
+    @staticmethod
     def down(args):
         args_output: str = args.output
 
@@ -85,6 +126,7 @@ class Actions:
                 Bar.open()
                 data = api.download(item.id)
                 open(path, "w").write(str(data))
+                Actions.unpack_json(path)
                 i += 1
                 Bar.done(": " + path)
             except Exception as _e:
@@ -123,4 +165,3 @@ class Actions:
             viewer.list_section(args_section)
         else:
             viewer.list_all()
-

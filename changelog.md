@@ -1,5 +1,7 @@
 # Changelog
 
+- 0.1.0
+  - Consertada a opção de download
 - 0.0.7
   - Alterando path para funcionar no windows
 - 0.0.6

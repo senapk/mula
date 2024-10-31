@@ -56,7 +56,10 @@ class MoodleAPI:
         soup = self.browser.page
         arqs = soup.findAll('h4', {'id': lambda value: value and value.startswith("fileid")})
         title = soup.find('a', {'href': self.browser.get_url()}).get_text()
-        descr = soup.find('div', {'class': 'box py-3 generalbox'}).find('div', {'class': 'no-overflow'}).get_text()
+        try:
+            descr = soup.find('div', {'class': 'box py-3 generalbox'}).find('div', {'class': 'no-overflow'}).get_text()
+        except AttributeError:
+            descr = ""
 
         vpl = JsonVPL(title, descr)
         for arq in arqs:
