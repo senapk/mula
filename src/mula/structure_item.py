@@ -12,8 +12,11 @@ class StructureItem:
     # "" se não tiver label
     @staticmethod
     def parse_label(title) -> str:
+        valid_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
         ttl_splt = title.strip().split(" ")
         for ttl in ttl_splt:
             if len(ttl) > 0 and ttl[0] == '@':
-                return ttl[1:]
+                # Remove all invalid characters from the label
+                label = "".join(c for c in ttl[1:] if c in valid_chars)
+                return label
         return ""
