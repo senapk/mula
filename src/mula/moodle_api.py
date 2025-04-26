@@ -144,7 +144,7 @@ class MoodleAPI:
         if len(vpl.required) > 0:
             self._send_vpl_files(self.urlHandler.required_files(qid), vpl.required)
 
-    def set_execution_options(self, qid):
+    def set_execution_options(self, qid: int):
         self.open_url(self.urlHandler.execution_options(qid))
 
         self.browser.select_form(nr=0)

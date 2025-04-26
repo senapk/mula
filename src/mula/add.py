@@ -5,12 +5,12 @@ from .bar import Bar
 from .json_tools import JsonVplLoader, JsonVPL
 from .structure_item import StructureItem
 from .param import CommonParam
-from .credentials import Credentials
+from .structure import Structure
 
 
 class Add:
-    def __init__(self, section: Optional[int], param: CommonParam, structure=None):
-        self.section: Optional[int] = 0 if section is None else section
+    def __init__(self, section: Optional[int], param: CommonParam, structure: Structure | None =None):
+        self.section: int = 0 if section is None else section
         self.param = param
         if structure is None:
             self.structure = StructureLoader.load()

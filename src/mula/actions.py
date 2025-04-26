@@ -5,6 +5,8 @@ from .moodle_api import MoodleAPI
 from .bar import Bar
 from .viewer import Viewer
 from .param import CommonParam
+import argparse
+from .credentials import Credentials
 
 import json
 from typing import Optional
@@ -15,7 +17,15 @@ import os
 class Actions:
 
     @staticmethod
-    def add(args):
+    def add(args: argparse.Namespace):
+        if args.remote is None:
+            print("remote database not defined")
+            print("use --remote fup | ed | poo")
+            return
+        else:
+            credentials = Credentials.load_credentials()
+            credentials.set_remote(args.remote)
+    
         param = CommonParam()
         param.duedate = "0" if args.duedate is None else args.duedate
         param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
@@ -40,7 +50,16 @@ class Actions:
             action.add_target(label)
 
     @staticmethod
-    def update(args):
+    def update(args: argparse.Namespace):
+        if args.remote is None:
+            print("remote database not defined")
+            print("use --remote fup | ed | poo")
+            return
+        else:
+            credentials = Credentials.load_credentials()
+            credentials.set_remote(args.remote)
+
+        
         param = CommonParam()
         param.duedate = args.duedate
         param.maxfiles = args.maxfiles
@@ -58,7 +77,6 @@ class Actions:
             param.visible = True if args.visible == 1 else False
 
 
-
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.sections, args.ids, args.labels, structure)
 
@@ -73,7 +91,7 @@ class Actions:
         try:
             data = json.loads(open(json_file).read())
              
-            folder = json_file[:-5] + "_" + data["title"].replace(" ", "_").lower().replace("[", "-").replace("]", "-").replace("(", "_").replace(")", "_")
+            folder: str = json_file[:-5] + "_" + data["title"].replace(" ", "_").lower().replace("[", "-").replace("]", "-").replace("(", "_").replace(")", "_")
             if os.path.exists(folder):
                 os.remove(folder)
             os.mkdir(folder)
@@ -82,15 +100,15 @@ class Actions:
             open(description_file, "w").write(description)
             
             for f in data["upload"]:
-                file_name = os.path.join(folder, f["name"])
+                file_name: str = os.path.join(folder, f["name"])
                 open(file_name, "w").write(f["contents"])
             for f in data["keep"]:
-                file_name = os.path.join(folder, f["name"])
+                file_name: str = os.path.join(folder, f["name"])
                 open(file_name, "w").write(f["contents"])
             for f in data["required"]:
-                file_name = os.path.join(folder, f["name"])
+                file_name: str = os.path.join(folder, f["name"])
                 open(file_name, "w").write(f["contents"])
-            yaml_file = os.path.join(folder, "config.yaml")
+            yaml_file: str = os.path.join(folder, "config.yaml")
             with open(yaml_file, "w") as y:
                 y.write("upload:\n")
                 for f in data["upload"]:
@@ -109,7 +127,7 @@ class Actions:
             return
 
     @staticmethod
-    def down(args):
+    def down(args: argparse.Namespace):
         args_output: str = args.output
 
         api = MoodleAPI()
@@ -135,7 +153,7 @@ class Actions:
                 Bar.fail(": timeout")
 
     @staticmethod
-    def rm(args):
+    def rm(args: argparse.Namespace):
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.sections, args.ids, args.labels, structure)
 
@@ -156,7 +174,7 @@ class Actions:
                 Bar.fail(": timeout")
 
     @staticmethod
-    def list(args):
+    def list(args: argparse.Namespace):
         args_section: Optional[int] = args.section
         args_url: bool = args.url
         args_topic_only: bool = args.topic

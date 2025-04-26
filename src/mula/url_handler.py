@@ -54,15 +54,13 @@ class URLHandler:
         return self._url_base + "/mod/vpl/forms/executionoptions.php?id=" + str(qid)
 
     @staticmethod
-    def parse_id(url) -> str:
+    def parse_id(url: str) -> str:
         return url.split("id=")[1].split("&")[0]
 
     @staticmethod
-    def parse_id_from_update(url) -> str:
+    def parse_id_from_update(url: str) -> str:
         return url.split("update=")[1]
 
     @staticmethod
-    def is_vpl_url(url) -> bool:
+    def is_vpl_url(url: str) -> bool:
         return '/mod/vpl/view.php?id=' in url
-
-

@@ -11,7 +11,7 @@ class StructureItem:
     # "@123 ABCDE..." -> 123
     # "" se não tiver label
     @staticmethod
-    def parse_label(title) -> str:
+    def parse_label(title: str) -> str:
         valid_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
         ttl_splt = title.strip().split(" ")
         for ttl in ttl_splt:

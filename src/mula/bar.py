@@ -9,9 +9,9 @@ class Bar:
         print(text.center(fill, '.') + " ", end='', flush=True)
 
     @staticmethod
-    def done(text=""):
+    def done(text: str = ""):
         print("] DONE" + text)
 
     @staticmethod
-    def fail(text=""):
+    def fail(text: str = ""):
         print("] FAIL" + text)

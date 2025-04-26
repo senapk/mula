@@ -60,7 +60,7 @@ class JsonVplLoader:
         return vpl
 
     @staticmethod
-    def save_as(file_url, filename) -> bool:
+    def save_as(file_url: str, filename: str) -> bool:
         try:
             urllib.request.urlretrieve(file_url, filename)
         except urllib.error.HTTPError:
@@ -71,8 +71,11 @@ class JsonVplLoader:
     @staticmethod
     def load_remote(target: str) -> JsonVPL:
 
-        remote_url = Credentials.load_credentials().remote
-        url = remote_url + "/" + target + "/.cache/mapi.json"
+        remote_url: str | None = Credentials.load_credentials().remote_url
+        if remote_url is None:
+            print("Error: remote url not set")
+            exit(1)
+        url: str = remote_url + "/" + target + "/.cache/mapi.json"
         print("    - " + url)
         _fd, path = tempfile.mkstemp(suffix = "_" + target + '.json')
         print("    - Loading in "    + path + " ... ", end = "")

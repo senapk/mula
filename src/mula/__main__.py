@@ -37,19 +37,19 @@ def main():
     desc = ("Gerenciar vpls do moodle de forma automatizada")
 
     parser = argparse.ArgumentParser(prog='mapi.py', description=desc, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-c', '--config', type=str, help="config file path")
+    parser.add_argument('--config', type=str, help="config file path")
     parser.add_argument('-t', '--timeout', type=int, help="max timeout to way moodle response")
     parser.add_argument('-v', '--version', action="store_true", help="show version")
     parser.add_argument('-l', '--local', action="store_true", help="search for mapi.json inside current directory")
 
     parser.add_argument("--username", "-u", type=str, help='username')
     parser.add_argument("--password", "-p", type=str, help="password")
-    parser.add_argument("--index", "-i", type=int, help="índice do curso no moodle")
-    parser.add_argument("--database", "-d", type=str, help="[fup | ed | poo]")
+    parser.add_argument("--index", "-i", type=int, help="Moodle course id")
 
     subparsers = parser.add_subparsers(title="subcommands", help="help for subcommand")
 
     parser_add = subparsers.add_parser('add', parents=[p_section, p_common], help="add")
+    parser_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     parser_add.add_argument('targets', type=str, nargs='+', action='store', help='remote targets')
     parser_add.set_defaults(func=Actions.add)
 
@@ -65,6 +65,7 @@ def main():
     parser_down.set_defaults(func=Actions.down)
 
     parser_update = subparsers.add_parser('update', parents=[p_selection, p_common], help='Update vpls')
+    parser_update.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     parser_update.add_argument('-c', '--content', action='store_true', help="add/update conteúdo da questão")
     parser_update.set_defaults(func=Actions.update)
 
@@ -86,8 +87,9 @@ def main():
         credentials.password = args.password
     if args.index:
         credentials.index = args.index
-    if args.database:
-        credentials.database = args.database
+    # check if remote exists
+    # if args.remote:
+    #     credentials.remote_db = args.remote
     credentials.fill_empty()
 
     # verify if any subcommand was used

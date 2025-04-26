@@ -1,6 +1,5 @@
 import os
 from typing import Optional
-import pathlib
 import json
 import getpass
 
@@ -15,8 +14,8 @@ class Credentials:
         self.username = None
         self.password = None
         self.index: Optional[str] = None
-        self.database = None
-        self.remote = None
+        self.remote_db = None
+        self.remote_url = None
 
     def fill_empty(self):
         if self.username is None:
@@ -30,15 +29,8 @@ class Credentials:
         if self.index is None:
             print("Digite o número do curso:", end="")
             self.index = input()
-        
-        if self.database is None:
-            print("Digite o nome do banco de dados remoto [fup | poo | ed]:", end="")
-            self.database = input()
 
-        self.remote = Credentials.database_url[0] + self.database + Credentials.database_url[1]
-
-
-    def load_file(self, path):
+    def load_file(self, path: str):
         config = {}
         try:
             if not os.path.isfile(path):
@@ -55,8 +47,14 @@ class Credentials:
             self.password = config["password"]
         if "index" in config:
             self.index = config["index"]
-        if "database" in config:
-            self.database = config["database"]
+
+    def set_remote(self, remote: str):
+        if remote == "fup" or remote == "poo" or remote == "ed":
+            self.remote_db = remote
+            self.remote_url = Credentials.database_url[0] + remote + Credentials.database_url[1]
+        else:
+            print("Remote database not found")
+            exit(1)
 
     @staticmethod
     def load_credentials():
@@ -65,5 +63,5 @@ class Credentials:
         Credentials.instance = Credentials()
         return Credentials.instance
 
-    def __str__(self):
-        return self.username + ":" + self.password + ":" + self.url + ":" + self.index
+    def __str__(self) -> str:
+        return "{}:{}:{}:{}".format(self.username, self.password, self.url, self.index)

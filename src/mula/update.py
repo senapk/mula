@@ -3,15 +3,16 @@ from .structure import Structure
 from .moodle_api import MoodleAPI
 from .bar import Bar
 from .param import CommonParam
+from .structure_item import StructureItem
 
 class Update:
 
     @staticmethod
-    def load_itens(args_all, args_section, args_ids, args_labels, structure):
-        item_list = []
+    def load_itens(args_all: bool, args_section: list[int], args_ids: list[int], args_labels: list[str], structure: Structure):
+        item_list: list[StructureItem] = []
         if args_all:
             item_list = structure.get_itens()
-        elif args_section is not None and len(args_section) > 0:
+        elif args_section and len(args_section) > 0:
             for section in args_section:
                 item_list += structure.get_itens(section)
         elif args_ids:
@@ -26,7 +27,7 @@ class Update:
         return item_list
 
     @staticmethod
-    def from_remote(item_list, param: CommonParam, structure):
+    def from_remote(item_list: list[StructureItem], param: CommonParam, structure: Structure):
         for item in item_list:
             print("- Updating: " + str(item))
             if item.label == "":
@@ -36,7 +37,7 @@ class Update:
             action.add_target(item.label)
 
     @staticmethod
-    def exec_opt(item_list, args_exec_options):
+    def exec_opt(item_list: list[StructureItem], args_exec_options: bool):
         i = 0
         api = MoodleAPI()
         while i < len(item_list):
@@ -55,4 +56,3 @@ class Update:
                 print(type(_e))  # debug
                 print(_e)
                 Bar.fail(": timeout")
-
