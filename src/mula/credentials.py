@@ -13,7 +13,7 @@ class Credentials:
         self.url = Credentials.moodle_url
         self.username = None
         self.password = None
-        self.index: Optional[str] = None
+        self.course: Optional[str] = None
         self.remote_db = None
         self.remote_url = None
 
@@ -25,10 +25,6 @@ class Credentials:
         if self.password is None:
             print("Digite sua senha do moodle:", flush=True)
             self.password = getpass.getpass()
-
-        if self.index is None:
-            print("Digite o número do curso:", end="")
-            self.index = input()
 
     def load_file(self, path: str):
         config = {}
@@ -46,7 +42,7 @@ class Credentials:
         if "password" in config:
             self.password = config["password"]
         if "index" in config:
-            self.index = config["index"]
+            self.course = config["index"]
 
     def set_remote(self, remote: str):
         if remote == "fup" or remote == "poo" or remote == "ed":
@@ -64,4 +60,4 @@ class Credentials:
         return Credentials.instance
 
     def __str__(self) -> str:
-        return "{}:{}:{}:{}".format(self.username, self.password, self.url, self.index)
+        return "{}:{}:{}:{}".format(self.username, self.password, self.url, self.course)

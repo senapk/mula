@@ -22,14 +22,19 @@ class Actions:
             print("remote database not defined")
             print("use --remote fup | ed | poo")
             return
+        elif args.course is None:
+            print("course index not defined")
+            print("use --course <course id>")
+            return
         else:
             credentials = Credentials.load_credentials()
             credentials.set_remote(args.remote)
+            credentials.course = args.course
     
         param = CommonParam()
         param.duedate = "0" if args.duedate is None else args.duedate
         param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
-        param.content = True
+        param.info = True
         param.exec = True
 
         if args.local:
@@ -55,18 +60,23 @@ class Actions:
             print("remote database not defined")
             print("use --remote fup | ed | poo")
             return
+        elif args.course is None:
+            print("course index not defined")
+            print("use --course <course id>")
+            return
         else:
             credentials = Credentials.load_credentials()
             credentials.set_remote(args.remote)
+            credentials.course = args.course
 
         
         param = CommonParam()
         param.duedate = args.duedate
         param.maxfiles = args.maxfiles
-        param.content= args.content
+        param.info = args.info
         param.exec = args.exec
 
-        if not args.duedate and not args.maxfiles and not args.content and not args.exec and not args.visible:
+        if not args.duedate and not args.maxfiles and not args.info and not args.exec and not args.visible:
             print("Nothing to update, please provide at least one action(--content, --duedate, --visible, ...")
             return
 
@@ -128,6 +138,14 @@ class Actions:
 
     @staticmethod
     def down(args: argparse.Namespace):
+        if args.course is None:
+            print("course index not defined")
+            print("use --course <course id>")
+            return
+        else:
+            credentials = Credentials.load_credentials()
+            credentials.course = args.course
+
         args_output: str = args.output
 
         api = MoodleAPI()
@@ -154,6 +172,14 @@ class Actions:
 
     @staticmethod
     def rm(args: argparse.Namespace):
+        if args.course is None:
+            print("course index not defined")
+            print("use --course <course id>")
+            return
+        else:
+            credentials = Credentials.load_credentials()
+            credentials.course = args.course
+
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.sections, args.ids, args.labels, structure)
 
@@ -175,6 +201,15 @@ class Actions:
 
     @staticmethod
     def list(args: argparse.Namespace):
+        if args.course is None:
+            print("course index not defined")
+            print("use --course <course id>")
+            return
+        else:
+            credentials = Credentials.load_credentials()
+            credentials.course = args.course
+
+
         args_section: Optional[int] = args.section
         args_url: bool = args.url
         args_topic_only: bool = args.topic

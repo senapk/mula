@@ -30,7 +30,7 @@ class Add:
         return qid
 
     def set_keep(self, api: MoodleAPI, qid: int, keep_size: int):
-        if not self.param.content:
+        if not self.param.info:
             return
         Bar.send("keep")
         while True:
@@ -57,7 +57,7 @@ class Add:
                     api = MoodleAPI()
                     Bar.send("!", 0)
 
-        if self.param.content:
+        if self.param.info:
             Bar.send("files")
             while True:
                 try:

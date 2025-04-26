@@ -100,7 +100,7 @@ class MoodleAPI:
 
         self.browser.select_form(nr=0)
 
-        if vpl is not None and param.content == True:
+        if vpl is not None and param.info == True:
             Bar.send("description")
             self.browser['name'] = vpl.title
             self.browser['introeditor[text]'] = vpl.description

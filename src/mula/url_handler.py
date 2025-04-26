@@ -5,7 +5,7 @@ class URLHandler:
     def __init__(self):
         credentials: Credentials = Credentials.load_credentials()
         self._url_base: str = credentials.url
-        self.course_id: str = str(credentials.index)
+        self.course_id: str = str(credentials.course)
 
     def __str__(self):
         return self._url_base + ":" + self.course_id
