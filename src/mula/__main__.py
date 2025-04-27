@@ -46,6 +46,12 @@ def main():
 
     subparsers = parser.add_subparsers(title="subcommands", help="help for subcommand")
 
+    parser_courses = subparsers.add_parser('courses', help="Show user courses")
+    parser_courses.set_defaults(func=Actions.courses)
+
+    parser_auth = subparsers.add_parser('auth', help="Show user courses")
+    parser_auth.set_defaults(func=Actions.auth)
+
     parser_list = subparsers.add_parser('list', parents=[p_section], help='List course data')
     parser_list.add_argument("--course", "-c", type=int, help="Moodle course id")
     parser_list.add_argument('-u', '--url', action='store_true', help="Show vpl urls")
@@ -57,7 +63,6 @@ def main():
     parser_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     parser_add.add_argument('targets', type=str, nargs='+', action='store', help='remote targets')
     parser_add.set_defaults(func=Actions.add)
-
 
     parser_rm = subparsers.add_parser('rm', parents=[p_selection], help="Remove problems from Moodle")
     parser_rm.add_argument("--course", "-c", type=int, help="Moodle course id")

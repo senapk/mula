@@ -1,5 +1,9 @@
 # Changelog
 
+- 1.0.0
+  - Implementado `mula auth` para guardar credenciais
+  - Implementado `mula courses` para listar cursos
+  - Credenciais são carregadas automaticamente se existirem
 - 0.1.0
   - Consertada a opção de download
 - 0.0.7

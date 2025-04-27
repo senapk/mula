@@ -7,6 +7,7 @@ from .viewer import Viewer
 from .param import CommonParam
 import argparse
 from .credentials import Credentials
+from .url_handler import URLHandler
 
 import json
 from typing import Optional
@@ -15,6 +16,46 @@ import os
 
 
 class Actions:
+
+    @staticmethod
+    def auth(_args: argparse.Namespace):
+        credentials = Credentials.load_credentials()
+        credentials.fill_empty()
+        credentials.save_auth()
+
+
+    @staticmethod
+    def courses(_args: argparse.Namespace):
+        moodle = MoodleAPI()
+        urls = URLHandler()
+        moodle.open_url(urls.base())
+        # Obtém o conteúdo HTML da página
+        browser = moodle.browser
+        html = browser.get_current_page()
+
+        # Encontra todos os cards de cursos (ajuste o seletor conforme necessário)
+        course_cards = html.select('div.card[data-courseid]')
+
+        # Extrai informações dos cursos
+        courses = []
+        for card in course_cards:
+            course_id = card['data-courseid']
+            link = card.find('a')['href']
+            title = card.find('h4', class_='card-title').text.strip()
+            courses.append({
+                'id': course_id,
+                'title': title,
+                'link': link
+            })
+
+        title_pad = max([len(c['title']) for c in courses])
+
+        # Exibe os cursos encontrados
+        for i, course in enumerate(courses, 1):
+            print(f"Course ID: {course['id'].ljust(4)} - {course['title'].ljust(title_pad)} - Link: {course['link']}")
+
+        # Fecha o navegador
+        browser.close()
 
     @staticmethod
     def add(args: argparse.Namespace):
