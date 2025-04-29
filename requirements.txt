@@ -4,7 +4,7 @@
 
 # Example requirements
 mechanicalsoup
-appdirs 
+appdirs
 
 # PyPI package deployment
 build

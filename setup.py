@@ -39,7 +39,7 @@ setup(
     keywords='programming, learning',  # Optional
     package_dir={'': 'src'},  # Optional, use if source code is in a subdirectory under the project root, i.e. `src/`
     packages=find_packages(where='src'),  # Required
-    python_requires='>=3.7, <4',
+    python_requires='>=3.10, <4',
 
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
