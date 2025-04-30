@@ -129,7 +129,7 @@ class Actions:
 
 
         structure = StructureLoader.load()
-        item_list = Update.load_itens(args.all, args.sections, args.ids, args.labels, structure)
+        item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
 
         if len(item_list) == 0:
             print("No item found / selected")
@@ -191,7 +191,7 @@ class Actions:
 
         api = MoodleAPI()
         structure = StructureLoader.load()
-        item_list = Update.load_itens(args.all, args.sections, args.ids, args.labels, structure)
+        item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
 
         i = 0
         while i < len(item_list):
@@ -222,7 +222,7 @@ class Actions:
             credentials.course = args.course
 
         structure = StructureLoader.load()
-        item_list = Update.load_itens(args.all, args.sections, args.ids, args.labels, structure)
+        item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
 
         i = 0
         while i < len(item_list):
