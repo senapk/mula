@@ -10,6 +10,8 @@ class Credentials:
     package_name = "mula"
     credentials_file = "credentials.json"
 
+    database_init = "https://raw.githubusercontent.com/"
+    database_end = "base"
     database_url = ["https://raw.githubusercontent.com/qxcode", "/arcade/master/base"]
     moodle_url = "https://moodle2.quixada.ufc.br"
 
@@ -82,8 +84,12 @@ class Credentials:
         if remote == "fup" or remote == "poo" or remote == "ed":
             self.remote_db = remote
             self.remote_url = Credentials.database_url[0] + remote + Credentials.database_url[1]
+        elif remote.startswith(Credentials.database_init) and remote.endswith(Credentials.database_end):
+            self.remote_db = "user"
+            self.remote_url = remote
         else:
             print("Remote database not found")
+            print("Personal remote databases must start with " + Credentials.database_init + " and end with " + Credentials.database_end)
             exit(1)
 
     @staticmethod
