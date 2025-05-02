@@ -59,6 +59,8 @@ class Add:
 
         if self.param.info:
             Bar.send("files")
+            if self.param.drafts:
+                vpl.required = vpl.drafts[self.param.drafts]
             while True:
                 try:
                     api.send_files(vpl, qid)

@@ -26,6 +26,9 @@ class StructureLoader:
         Bar.send("parse")
         soup = api.browser.page  # BeautifulSoup(api.browser.response().read(), 'html.parser')
         topics = soup.find('ul', {'class:', 'topics'})
+        if topics is None:
+            print("\nfail: course not found")
+            exit()
         section_item_list = StructureLoader._make_entries_by_section(soup, topics.contents)
         section_labels: List[str] = StructureLoader._make_section_labels(topics.contents)
         Bar.done()

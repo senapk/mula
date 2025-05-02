@@ -1,5 +1,7 @@
 # Changelog
 
+- 1.1.0
+  - Adicionado suporte a colocar rascunhos como required
 - 1.0.0
   - Implementado `mula auth` para guardar credenciais
   - Implementado `mula courses` para listar cursos

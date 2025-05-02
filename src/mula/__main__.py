@@ -61,6 +61,7 @@ def main():
     parser_add = subparsers.add_parser('add', parents=[p_section, p_common], help="Add problems to Moodle")
     parser_add.add_argument("--course", "-c", type=int, help="Moodle course id")
     parser_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
+    parser_add.add_argument("--drafts", type=str, help="language extension")
     parser_add.add_argument('targets', type=str, nargs='+', action='store', help='remote targets')
     parser_add.set_defaults(func=Actions.add)
 
@@ -76,6 +77,7 @@ def main():
     parser_update = subparsers.add_parser('update', parents=[p_selection, p_common], help='Update problems in Moodle')
     parser_update.add_argument("--course", "-c", type=int, help="Moodle course id")
     parser_update.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
+    parser_update.add_argument('--drafts', type=str, help="language extension")
     parser_update.add_argument('--info', "-i", action='store_true', help="add/update conteúdo da questão")
     parser_update.set_defaults(func=Actions.update)
 

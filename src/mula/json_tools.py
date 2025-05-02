@@ -28,6 +28,7 @@ class JsonVPL:
         self.upload: List[JsonFile] = []
         self.required: List[JsonFile] = []
         self.keep: List[JsonFile] = []
+        self.drafts: dict[str, list[JsonFile]] = {}
         
         if tests is not None:
             self.set_test_cases(tests)
@@ -57,6 +58,9 @@ class JsonVplLoader:
             vpl.keep.append(JsonFile(f["name"], f["contents"]))
         for f in data["required"]:
             vpl.required.append(JsonFile(f["name"], f["contents"]))
+        for k, v in data["draft"].items():
+            for file in v:
+                vpl.drafts.setdefault(k, []).append(JsonFile(file["name"], file["contents"]))
         return vpl
 
     @staticmethod

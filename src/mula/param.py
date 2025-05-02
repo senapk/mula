@@ -6,3 +6,4 @@ class CommonParam:
         self.visible: bool | None = None
         self.exec: bool | None = None
         self.info: bool | None = None
+        self.drafts: str | None = None

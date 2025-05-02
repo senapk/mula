@@ -77,6 +77,7 @@ class Actions:
         param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
         param.info = True
         param.exec = True
+        param.drafts = args.drafts
 
         if args.local:
             param.local = True
@@ -116,6 +117,7 @@ class Actions:
         param.maxfiles = args.maxfiles
         param.info = args.info
         param.exec = args.exec
+        param.drafts = args.drafts
 
         if not args.duedate and not args.maxfiles and not args.info and not args.exec and not args.visible:
             print("Nothing to update, please provide at least one action(--content, --duedate, --visible, ...")
