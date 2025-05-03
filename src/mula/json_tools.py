@@ -75,7 +75,7 @@ class JsonVplLoader:
     @staticmethod
     def load_remote(target: str) -> JsonVPL:
 
-        remote_url: str | None = Credentials.load_credentials().remote_url
+        remote_url: str | None = Credentials.load_credentials().remote_db
         if remote_url is None:
             print("Error: remote url not set")
             exit(1)
@@ -90,9 +90,9 @@ class JsonVplLoader:
         exit(1)
 
     @staticmethod
-    def load_local(target: str) -> JsonVPL:
+    def load_local(target: str, base_folder: str) -> JsonVPL:
 
-        path = os.path.join("base", target, ".cache", "mapi.json")
+        path = os.path.join(base_folder, target, ".cache", "mapi.json")
         print("    - Loading from local in "    + path + " ... ", end = "")
         if os.path.exists(path):
             with open(path, "r") as file:

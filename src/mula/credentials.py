@@ -17,18 +17,27 @@ class Credentials:
 
     def __init__(self):
         self.url = Credentials.moodle_url
-        self.username = None
-        self.password = None
-        self.course: Optional[str] = None
-        self.remote_db = None
-        self.remote_url = None
+        self.username: str | None = None
+        self.password: str | None = None
+        self.course_id: Optional[str] = None # moodle course id
+        self.remote_alias: str | None = None # fup | ed | poo
+        self.folder_db: str | None = None
+        self.remote_db: str | None = None
 
-    def fill_empty(self):
+    def fill_from_auth(self) -> bool:
         if self.username is None and self.password is None:
             self.try_load_auth()
             if self.username is not None and self.password is not None:
-                return
+                return True
+        return False
 
+
+    def fill_empty(self):
+        if self.fill_from_auth():
+            return
+        self.force_read()
+
+    def force_read(self):
         if self.username is None:
             print("Digite seu usuário do moodle: ", end="")
             self.username = input()
@@ -78,15 +87,17 @@ class Credentials:
         if "password" in config:
             self.password = config["password"]
         if "index" in config:
-            self.course = config["index"]
+            self.course_id = config["index"]
 
-    def set_remote(self, remote: str):
+    def set_remote(self, remote: str | None):
+        if remote is None:
+            return
         if remote == "fup" or remote == "poo" or remote == "ed":
-            self.remote_db = remote
-            self.remote_url = Credentials.database_url[0] + remote + Credentials.database_url[1]
+            self.remote_alias = remote
+            self.remote_db = Credentials.database_url[0] + remote + Credentials.database_url[1]
         elif remote.startswith(Credentials.database_init) and remote.endswith(Credentials.database_end):
-            self.remote_db = "user"
-            self.remote_url = remote
+            self.remote_alias = "user"
+            self.remote_db = remote
         else:
             print("Remote database not found")
             print("Personal remote databases must start with " + Credentials.database_init + " and end with " + Credentials.database_end)
@@ -100,4 +111,4 @@ class Credentials:
         return Credentials.instance
 
     def __str__(self) -> str:
-        return "{}:{}:{}:{}".format(self.username, self.password, self.url, self.course)
+        return "{}:{}:{}:{}".format(self.username, self.password, self.url, self.course_id)

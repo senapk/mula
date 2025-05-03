@@ -20,7 +20,9 @@ class Actions:
     @staticmethod
     def auth(_args: argparse.Namespace):
         credentials = Credentials.load_credentials()
-        credentials.fill_empty()
+        credentials.username = None
+        credentials.password = None
+        credentials.force_read()
         credentials.save_auth()
 
 
@@ -58,32 +60,39 @@ class Actions:
         browser.close()
 
     @staticmethod
-    def add(args: argparse.Namespace):
-        if args.remote is None:
-            print("remote database not defined")
+    def check_add_update(args: argparse.Namespace, param: CommonParam) -> bool:
+        if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
+            print("you must set remote database or local folder")
             print("use --remote fup | ed | poo")
-            return
-        elif args.course is None:
+            print("or  --folder <local base folder>")
+            return False
+
+        if args.course is None:
             print("course index not defined")
             print("use --course <course id>")
-            return
-        else:
-            credentials = Credentials.load_credentials()
-            credentials.set_remote(args.remote)
-            credentials.course = args.course
-    
-        param = CommonParam()
+            return False
+
+        credentials = Credentials.load_credentials()
+        credentials.set_remote(args.remote)
+        credentials.folder_db = args.folder
+        credentials.course_id = args.course
+
         param.duedate = "0" if args.duedate is None else args.duedate
         param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
         param.info = True
         param.exec = True
         param.drafts = args.drafts
 
-        if args.local:
-            param.local = True
-
         if args.visible is not None:
             param.visible = True if args.visible == 1 else False
+
+        return True
+
+    @staticmethod
+    def add(args: argparse.Namespace):
+        param = CommonParam()
+        if not Actions.check_add_update(args, param):
+            return
       
         for target in args.targets:
             label = target
@@ -98,37 +107,13 @@ class Actions:
 
     @staticmethod
     def update(args: argparse.Namespace):
-        if args.remote is None:
-            print("remote database not defined")
-            print("use --remote fup | ed | poo")
-            return
-        elif args.course is None:
-            print("course index not defined")
-            print("use --course <course id>")
-            return
-        else:
-            credentials = Credentials.load_credentials()
-            credentials.set_remote(args.remote)
-            credentials.course = args.course
-
-        
         param = CommonParam()
-        param.duedate = args.duedate
-        param.maxfiles = args.maxfiles
-        param.info = args.info
-        param.exec = args.exec
-        param.drafts = args.drafts
+        if not Actions.check_add_update(args, param):
+            return
 
         if not args.duedate and not args.maxfiles and not args.info and not args.exec and not args.visible:
-            print("Nothing to update, please provide at least one action(--content, --duedate, --visible, ...")
+            print("Nothing to update, please provide at least one action(--info, --duedate, --visible, ...")
             return
-
-        if args.local:
-            param.local = True
-
-        if args.visible is not None:
-            param.visible = True if args.visible == 1 else False
-
 
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
@@ -187,7 +172,7 @@ class Actions:
             return
         else:
             credentials = Credentials.load_credentials()
-            credentials.course = args.course
+            credentials.course_id = args.course
 
         args_output: str = args.output
 
@@ -221,7 +206,7 @@ class Actions:
             return
         else:
             credentials = Credentials.load_credentials()
-            credentials.course = args.course
+            credentials.course_id = args.course
 
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
@@ -250,7 +235,7 @@ class Actions:
             return
         else:
             credentials = Credentials.load_credentials()
-            credentials.course = args.course
+            credentials.course_id = args.course
 
 
         args_section: Optional[int] = args.section

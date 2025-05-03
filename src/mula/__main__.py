@@ -25,11 +25,11 @@ def main():
     selection_group.add_argument('-s', '--section', metavar='SECTION', nargs='*', type=int, help="")
 
     p_common = argparse.ArgumentParser(add_help=False)
-    p_common.add_argument('-d', '--duedate', type=str, action='store', 
+    p_common.add_argument('--duedate', type=str, action='store', 
                            help='duedate 0 to disable or duedate yyyy:m:d:h:m')
-    p_common.add_argument('-m', '--maxfiles', type=int, action='store', help='max student files')
-    p_common.add_argument('-v', '--visible', type=int, action='store', help="make entry visible 1 or 0")
-    p_common.add_argument('-e', '--exec', action='store_true', help="enable all execution options")
+    p_common.add_argument('--maxfiles', type=int, action='store', help='max student files')
+    p_common.add_argument('--visible', type=int, action='store', help="make entry visible 1 or 0")
+    p_common.add_argument('--exec', action='store_true', help="enable all execution options")
 
     p_out = argparse.ArgumentParser(add_help=False)
     p_out.add_argument('-o', '--output', type=str, default='.', action='store', help='Output directory')
@@ -40,7 +40,6 @@ def main():
     parser.add_argument('--config', type=str, help="config file path")
     parser.add_argument('-t', '--timeout', type=int, help="max timeout to way moodle response")
     parser.add_argument('-v', '--version', action="store_true", help="show version")
-    parser.add_argument('-l', '--local', action="store_true", help="search for mapi.json inside current directory")
     parser.add_argument("--username", "-u", type=str, help='username')
     parser.add_argument("--password", "-p", type=str, help="password")
 
@@ -61,7 +60,8 @@ def main():
     parser_add = subparsers.add_parser('add', parents=[p_section, p_common], help="Add problems to Moodle")
     parser_add.add_argument("--course", "-c", type=int, help="Moodle course id")
     parser_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
-    parser_add.add_argument("--drafts", type=str, help="language extension")
+    parser_add.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
+    parser_add.add_argument("--drafts", "-d", type=str, help="language extension")
     parser_add.add_argument('targets', type=str, nargs='+', action='store', help='remote targets')
     parser_add.set_defaults(func=Actions.add)
 
@@ -77,8 +77,9 @@ def main():
     parser_update = subparsers.add_parser('update', parents=[p_selection, p_common], help='Update problems in Moodle')
     parser_update.add_argument("--course", "-c", type=int, help="Moodle course id")
     parser_update.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
-    parser_update.add_argument('--drafts', type=str, help="language extension")
-    parser_update.add_argument('--info', "-i", action='store_true', help="add/update conteúdo da questão")
+    parser_update.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
+    parser_update.add_argument("--drafts", "-d", type=str, help="language extension")
+    parser_update.add_argument("--info", "-i", action='store_true', help="add/update conteúdo da questão")
     parser_update.set_defaults(func=Actions.update)
 
     args = parser.parse_args()
@@ -101,6 +102,7 @@ def main():
     # check if remote exists
     # if args.remote:
     #     credentials.remote_db = args.remote
+
     credentials.fill_empty()
 
     # verify if any subcommand was used
