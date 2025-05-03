@@ -75,7 +75,7 @@ class JsonVplLoader:
     @staticmethod
     def load_remote(target: str) -> JsonVPL:
 
-        remote_url: str | None = Credentials.load_credentials().remote_db
+        remote_url: str | None = Credentials.load_credentials().__remote_db
         if remote_url is None:
             print("Error: remote url not set")
             exit(1)

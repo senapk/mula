@@ -23,7 +23,13 @@ class Actions:
         credentials.username = None
         credentials.password = None
         credentials.force_read()
-        credentials.save_auth()
+        credentials.save_file()
+
+    @staticmethod
+    def alias(args: argparse.Namespace):
+        credentials = Credentials.load_credentials()
+        credentials.set_alias(args.course, args.alias)
+        credentials.save_file()
 
 
     @staticmethod
@@ -59,6 +65,8 @@ class Actions:
         # Fecha o navegador
         browser.close()
 
+
+        
     @staticmethod
     def check_add_update(args: argparse.Namespace, param: CommonParam) -> bool:
         if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
@@ -72,10 +80,12 @@ class Actions:
             print("use --course <course id>")
             return False
 
+
+
         credentials = Credentials.load_credentials()
         credentials.set_remote(args.remote)
         credentials.folder_db = args.folder
-        credentials.course_id = args.course
+        credentials.set_course(args.course)
 
         param.duedate = "0" if args.duedate is None else args.duedate
         param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
@@ -172,7 +182,7 @@ class Actions:
             return
         else:
             credentials = Credentials.load_credentials()
-            credentials.course_id = args.course
+            credentials.set_course(args.course)
 
         args_output: str = args.output
 
@@ -206,7 +216,7 @@ class Actions:
             return
         else:
             credentials = Credentials.load_credentials()
-            credentials.course_id = args.course
+            credentials.set_course(args.course)
 
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
@@ -235,7 +245,7 @@ class Actions:
             return
         else:
             credentials = Credentials.load_credentials()
-            credentials.course_id = args.course
+            credentials.set_course(args.course)
 
 
         args_section: Optional[int] = args.section

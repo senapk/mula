@@ -40,9 +40,6 @@ def main():
     parser.add_argument('--config', type=str, help="config file path")
     parser.add_argument('-t', '--timeout', type=int, help="max timeout to way moodle response")
     parser.add_argument('-v', '--version', action="store_true", help="show version")
-    parser.add_argument("--username", "-u", type=str, help='username')
-    parser.add_argument("--password", "-p", type=str, help="password")
-
     subparsers = parser.add_subparsers(title="subcommands", help="help for subcommand")
 
     parser_courses = subparsers.add_parser('courses', help="Show user courses")
@@ -51,14 +48,19 @@ def main():
     parser_auth = subparsers.add_parser('auth', help="Show user courses")
     parser_auth.set_defaults(func=Actions.auth)
 
+    parser_alias = subparsers.add_parser('alias', help="Set alias for a course id")
+    parser_alias.add_argument("course", type=int, help="Moodle course id")
+    parser_alias.add_argument("alias", type=str, help="Alias for the course")
+    parser_alias.set_defaults(func=Actions.alias)
+
     parser_list = subparsers.add_parser('list', parents=[p_section], help='List course data')
-    parser_list.add_argument("--course", "-c", type=int, help="Moodle course id")
+    parser_list.add_argument("--course", "-c", type=str, help="Moodle course id or alias")
     parser_list.add_argument('-u', '--url', action='store_true', help="Show vpl urls")
     parser_list.add_argument("-t", "--topic", action='store_true', help="Show only session topics")
     parser_list.set_defaults(func=Actions.list)
 
     parser_add = subparsers.add_parser('add', parents=[p_section, p_common], help="Add problems to Moodle")
-    parser_add.add_argument("--course", "-c", type=int, help="Moodle course id")
+    parser_add.add_argument("--course", "-c", type=str, help="Moodle course id or alias")
     parser_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     parser_add.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
     parser_add.add_argument("--drafts", "-d", type=str, help="language extension")
@@ -91,19 +93,8 @@ def main():
     if args.timeout is not None:
         MoodleAPI.default_timeout = args.timeout
 
-    credentials = Credentials.load_credentials()
-    if args.config:
-        credentials.load_file(args.config)
-    if args.username:
-        credentials.username = args.username
-    if args.password:
-        credentials.password = args.password
-
-    # check if remote exists
-    # if args.remote:
-    #     credentials.remote_db = args.remote
-
-    credentials.fill_empty()
+    credentials = Credentials.load_credentials().load_file()
+    credentials.fill_empty() # fill username and password if not set
 
     # verify if any subcommand was used
     if hasattr(args, "func"):
