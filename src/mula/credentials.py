@@ -129,6 +129,14 @@ class Credentials:
             print("Personal remote databases must start with " + Credentials.database_init + " and end with " + Credentials.database_end)
             exit(1)
 
+    def get_remote(self) -> str | None:
+        if self.__remote_db is None:
+            print("Remote database not set")
+            print("Use --remote <fup | ed | poo>")
+            print("or --remote <url>")
+            raise ValueError("Remote database not set")
+        return self.__remote_db
+
     @staticmethod
     def load_credentials():
         if Credentials.instance is not None:

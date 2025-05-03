@@ -77,7 +77,7 @@ def main():
     parser_down.set_defaults(func=Actions.down)
 
     parser_update = subparsers.add_parser('update', parents=[p_selection, p_common], help='Update problems in Moodle')
-    parser_update.add_argument("--course", "-c", type=int, help="Moodle course id")
+    parser_update.add_argument("--course", "-c", type=str, help="Moodle course id")
     parser_update.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     parser_update.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
     parser_update.add_argument("--drafts", "-d", type=str, help="language extension")
