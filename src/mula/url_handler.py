@@ -3,18 +3,20 @@ from .credentials import Credentials
 
 class URLHandler:
     def __init__(self):
-        credentials: Credentials = Credentials.load_credentials()
-        self._url_base: str = credentials.url
-        self.course_id: str = str((credentials.get_course()))
+        self.credentials: Credentials = Credentials.load_credentials()
+        self._url_base: str = self.credentials.url
+
+    def get_course_id(self) -> str:
+        return self.credentials.get_course()
 
     def __str__(self):
-        return self._url_base + ":" + self.course_id
+        return self._url_base + ":" + self.get_course_id()
 
     def base(self):
         return self._url_base
 
     def course(self):
-        return self._url_base + "/course/view.php?id=" + self.course_id
+        return self._url_base + "/course/view.php?id=" + self.get_course_id()
 
     def login(self):
         return self._url_base + '/login/index.php'
@@ -29,7 +31,7 @@ class URLHandler:
         return self._url_base + '/mod/vpl/forms/executionkeepfiles.php?id=' + str(qid)
 
     def new_vpl(self, section: int):
-        return self._url_base + "/course/modedit.php?add=vpl&type=&course=" + self.course_id + "&section=" + \
+        return self._url_base + "/course/modedit.php?add=vpl&type=&course=" + self.get_course_id() + "&section=" + \
                str(section) + "&return=0&sr=0 "
 
     def view_vpl(self, qid: int):

@@ -49,8 +49,8 @@ def main():
     parser_auth.set_defaults(func=Actions.auth)
 
     parser_alias = subparsers.add_parser('alias', help="Set alias for a course id")
-    parser_alias.add_argument("course", type=int, help="Moodle course id")
     parser_alias.add_argument("alias", type=str, help="Alias for the course")
+    parser_alias.add_argument("course", type=int, help="Moodle course id")
     parser_alias.set_defaults(func=Actions.alias)
 
     parser_list = subparsers.add_parser('list', parents=[p_section], help='List course data')

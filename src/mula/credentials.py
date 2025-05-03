@@ -36,7 +36,7 @@ class Credentials:
             print("Course not set")
             print("Use --course <course id>")
             print("or --alias <alias>")
-            exit(1)
+            raise ValueError("Course not set")
         return self.__course_id
 
     def set_course(self, course: str):
