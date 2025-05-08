@@ -65,6 +65,13 @@ class Actions:
         # Fecha o navegador
         browser.close()
 
+        credentials = Credentials.load_credentials()
+        print("\nCurrent courses alias setted: ")
+        for alias, course in credentials.course_alias.items():
+            print(f"  {alias} -> {course}")
+        if len(credentials.course_alias) == 0:
+            print("  No aliases set")
+
 
         
     @staticmethod

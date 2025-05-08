@@ -5,7 +5,7 @@ import urllib.error
 import os
 import tempfile
 from .credentials import Credentials
-
+import requests
 
 
 # Format used to send additional files to VPL
@@ -65,11 +65,16 @@ class JsonVplLoader:
 
     @staticmethod
     def save_as(file_url: str, filename: str) -> bool:
+        headers = {'User-Agent': 'Mozilla/5.0'}  # Evita bloqueios comuns
         try:
-            urllib.request.urlretrieve(file_url, filename)
-        except urllib.error.HTTPError:
+            r = requests.get(file_url, headers=headers, timeout=10)
+            r.raise_for_status()  # Levanta erro para códigos HTTP como 404, 403 etc.
+            with open(filename, 'wb') as f:
+                f.write(r.content)
+            return True
+        except requests.RequestException as e:
+            print(f"Error downloading file: {e}")
             return False
-        return True
 
     # remote is like https://raw.githubusercontent.com/qxcodefup/moodle/master/base/
     @staticmethod

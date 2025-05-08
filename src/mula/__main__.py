@@ -45,7 +45,7 @@ def main():
     parser_courses = subparsers.add_parser('courses', help="Show user courses")
     parser_courses.set_defaults(func=Actions.courses)
 
-    parser_auth = subparsers.add_parser('auth', help="Show user courses")
+    parser_auth = subparsers.add_parser('auth', help="Authenticate user")
     parser_auth.set_defaults(func=Actions.auth)
 
     parser_alias = subparsers.add_parser('alias', help="Set alias for a course id")
