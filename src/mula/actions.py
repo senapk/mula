@@ -120,9 +120,13 @@ class Actions:
         param = CommonParam()
         if not Actions.check_add_update(args, param):
             return
-
-        if not args.duedate and not args.maxfiles and not args.info and not args.exec and not args.visible:
+        
+        if not args.duedate and not args.maxfiles and not args.info and not args.exec and args.visible is None:
             print("Nothing to update, please provide at least one action(--info, --duedate, --visible, ...")
+            return
+        
+        if args.info and not args.drafts:
+            print("Please provide a remote or a folder")
             return
 
         structure = StructureLoader.load()
