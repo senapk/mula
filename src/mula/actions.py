@@ -18,7 +18,7 @@ import os
 class Actions:
 
     @staticmethod
-    def auth(_args: argparse.Namespace):
+    def auth(_: argparse.Namespace):
         credentials = Credentials.load_credentials()
         credentials.username = None
         credentials.password = None
@@ -33,7 +33,7 @@ class Actions:
 
 
     @staticmethod
-    def courses(_args: argparse.Namespace):
+    def courses(_: argparse.Namespace):
         moodle = MoodleAPI()
         urls = URLHandler()
         moodle.open_url(urls.base())
@@ -75,19 +75,11 @@ class Actions:
 
         
     @staticmethod
-    def check_add_update(args: argparse.Namespace, param: CommonParam) -> bool:
-        if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
-            print("you must set remote database or local folder")
-            print("use --remote fup | ed | poo")
-            print("or  --folder <local base folder>")
-            return False
-
+    def check_and_set_for_add_update(args: argparse.Namespace, param: CommonParam) -> bool:
         if args.course is None:
             print("course index not defined")
             print("use --course <course id>")
             return False
-
-
 
         credentials = Credentials.load_credentials()
         credentials.set_remote(args.remote)
@@ -108,8 +100,16 @@ class Actions:
     @staticmethod
     def add(args: argparse.Namespace):
         param = CommonParam()
-        if not Actions.check_add_update(args, param):
+        
+        if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
+            print("you must set remote database OR local folder")
+            print("use --remote fup | ed | poo")
+            print("or  --folder <local base folder>")
             return
+        
+        if not Actions.check_and_set_for_add_update(args, param):
+            return
+        
       
         for target in args.targets:
             label = target
@@ -125,11 +125,23 @@ class Actions:
     @staticmethod
     def update(args: argparse.Namespace):
         param = CommonParam()
-        if not Actions.check_add_update(args, param):
-            return
+        if args.info:
+            if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
+                print("--info requires a source")
+                print("you must set remote database OR local folder")
+                print("use --remote fup | ed | poo")
+                print("or  --folder <local base folder>")
+                return
 
-        if not args.duedate and not args.maxfiles and not args.info and not args.exec and not args.visible:
+        if not Actions.check_and_set_for_add_update(args, param):
+            return
+        
+        if all([x is None for x in [args.drafts, args.duedate, args.maxfiles, args.info, args.exec, args.visible]]):
             print("Nothing to update, please provide at least one action(--info, --duedate, --visible, ...")
+            return
+                
+        if args.drafts is not None and args.info is None:
+            print("Drafts only available with --info")
             return
 
         structure = StructureLoader.load()
