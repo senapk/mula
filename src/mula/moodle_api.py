@@ -3,10 +3,9 @@ from .url_handler import URLHandler
 import mechanicalsoup
 from .json_tools import JsonVPL, JsonFile
 from typing import Optional, Any, List
-from .bar import Bar
+from .log import Log
 import json
-from .param import CommonParam
-
+from .param import TaskParameters
 
 class MoodleAPI:
     default_timeout: int = 10
@@ -17,6 +16,11 @@ class MoodleAPI:
         self.browser = mechanicalsoup.StatefulBrowser(user_agent='MechanicalSoup')
         self.browser.set_user_agent('Mozilla/5.0')
         self._login()
+        self.log = Log(None)
+
+    def set_log(self, log: Log):
+        self.log = log
+        return self
 
     def open_url(self, url: str, data_files: Optional[Any] = None):
         if MoodleAPI.default_timeout != 0:
@@ -41,18 +45,17 @@ class MoodleAPI:
             exit(0)
 
     def delete(self, qid: int):
-        Bar.send("load")
+        self.log.send("load")
         self.open_url(self.urlHandler.delete_vpl(qid))
-        Bar.send("submit")
+        self.log.send("submit")
         self.browser.select_form(nr=0)
         self.browser.submit_selected()
 
     def download(self, vplid: int) -> JsonVPL:
         url = self.urlHandler.view_vpl(vplid)
-
-        Bar.send("open")
+        self.log.send("open")
         self.open_url(url)
-        Bar.send("parse")
+        self.log.send("parse")
         soup = self.browser.page
         arqs = soup.findAll('h4', {'id': lambda value: value and value.startswith("fileid")})
         title = soup.find('a', {'href': self.browser.get_url()}).get_text()
@@ -88,33 +91,33 @@ class MoodleAPI:
         self.browser["duedate[minute]"] = str(int(minute))
 
     def update_duedate_only(self, url: str, duedate: Optional[str] = None):
-        Bar.send("duedate")
+        self.log.send("duedate")
         self.open_url(url)
         self.browser.select_form(nr=0)
         self.set_duedate_field_in_form(duedate)
         self.browser.form.choose_submit("submitbutton")
         self.browser.submit_selected()
 
-    def send_basic_info(self, url: str, vpl: Optional[JsonVPL], param: CommonParam) -> int:
+    def send_basic_info(self, url: str, vpl: Optional[JsonVPL], param: TaskParameters) -> int:
         self.open_url(url)
 
         self.browser.select_form(nr=0)
 
         if vpl is not None and param.info == True:
-            Bar.send("description")
+            self.log.send("description")
             self.browser['name'] = vpl.title
             self.browser['introeditor[text]'] = vpl.description
     
         if param.visible is not None:
-            Bar.send("visible")
+            self.log.send("visible")
             self.browser['visible'] = '1' if param.visible else '0'
 
         if param.duedate is not None:
-            Bar.send("duedate")
+            self.log.send("duedate")
             self.set_duedate_field_in_form(param.duedate)
 
         if param.maxfiles is not None:
-            Bar.send("maxfiles")
+            self.log.send("maxfiles")
             self.browser['maxfiles'] = max(len(vpl.keep), int(param.maxfiles))
     
         self.browser.form.choose_submit("submitbutton")

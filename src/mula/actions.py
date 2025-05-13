@@ -1,19 +1,20 @@
+from mula.add_action import AddAction
 from .add import Add
 from .structure_loader import StructureLoader
 from .update import Update
 from .moodle_api import MoodleAPI
-from .bar import Bar
+from .log import Log
 from .viewer import Viewer
-from .param import CommonParam
+from .param import TaskParameters
 import argparse
 from .credentials import Credentials
 from .url_handler import URLHandler
-
+from concurrent.futures import ThreadPoolExecutor
+import threading
 import json
 from typing import Optional
 
 import os
-
 
 class Actions:
 
@@ -39,17 +40,17 @@ class Actions:
         moodle.open_url(urls.base())
         # Obtém o conteúdo HTML da página
         browser = moodle.browser
-        html = browser.get_current_page()
+        html = browser.get_current_page() # type: ignore
 
         # Encontra todos os cards de cursos (ajuste o seletor conforme necessário)
-        course_cards = html.select('div.card[data-courseid]')
+        course_cards = html.select('div.card[data-courseid]') # type: ignore
 
         # Extrai informações dos cursos
-        courses = []
-        for card in course_cards:
-            course_id = card['data-courseid']
-            link = card.find('a')['href']
-            title = card.find('h4', class_='card-title').text.strip()
+        courses: list[dict[str, str]] = []
+        for card in course_cards: # type: ignore
+            course_id = card['data-courseid'] # type: ignore
+            link = card.find('a')['href'] # type: ignore
+            title = card.find('h4', class_='card-title').text.strip() # type: ignore
             courses.append({
                 'id': course_id,
                 'title': title,
@@ -59,7 +60,7 @@ class Actions:
         title_pad = max([len(c['title']) for c in courses])
 
         # Exibe os cursos encontrados
-        for i, course in enumerate(courses, 1):
+        for course in courses:
             print(f"Course ID: {course['id'].ljust(4)} - {course['title'].ljust(title_pad)} - Link: {course['link']}")
 
         # Fecha o navegador
@@ -75,7 +76,7 @@ class Actions:
 
         
     @staticmethod
-    def check_and_set_for_add_update(args: argparse.Namespace, param: CommonParam) -> bool:
+    def check_and_set_for_add_update(args: argparse.Namespace, param: TaskParameters) -> bool:
         if args.course is None:
             print("course index not defined")
             print("use --course <course id>")
@@ -90,7 +91,6 @@ class Actions:
         param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
         param.info = True
         param.exec = True
-        param.drafts = args.drafts
 
         if args.visible is not None:
             param.visible = True if args.visible == 1 else False
@@ -99,7 +99,7 @@ class Actions:
 
     @staticmethod
     def add(args: argparse.Namespace):
-        param = CommonParam()
+        param = TaskParameters()
         
         if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
             print("you must set remote database OR local folder")
@@ -110,21 +110,84 @@ class Actions:
         if not Actions.check_and_set_for_add_update(args, param):
             return
         
-      
-        for target in args.targets:
-            label = target
-            section = args.section
-            if args.section is None:
-                section = 0
-                label = target
+        if args.follow is not None:
+            if not os.path.exists(args.follow):
+                print("Persistence file not found")
+                return
+            if len(args.targets) != 0:
+                print("Persistence file and targets are mutually exclusive")
+                return
+            
+        action_list: list[AddAction] = []
+        if args.follow is not None:
+            try:
+                lines = open(args.follow).read().splitlines()
+                for line in lines:
+                    action = AddAction()
+                    action.rebuild(line)
+                    action_list.append(action)
+            except Exception as e:
+                print("Error reading persistence file", args.follow)
+                print(e)
+                return
+        else:
+            for target in args.targets:
+                action = AddAction()
+                section: int = 0
+                if args.section is not None:
+                    section = args.section
                 if ":" in target:
                     section, label = target.split(":")
-            action = Add(int(section), param)
-            action.add_target(label)
+                    action.set_section(int(section))
+                    action.set_label(label)
+                else:
+                    action.set_label(target)
+                    if args.section is not None:
+                        action.set_section(args.section)
+                action.set_drafts(args.drafts)
+                action.set_status(AddAction.TODO)
+                action_list.append(action)
+            
+        if args.create is not None:
+            open(args.create, "w").write("\n".join([x.serialize() for x in action_list]))
+            print("Persistence file created: " + args.create)
+            print("You can use --follow", args.create)
+            return
+
+        lock = threading.Lock()
+
+        n_threads: int = 1 if args.threads is None else args.threads
+        print("Threads: " + str(n_threads))
+
+        structure = StructureLoader.load(None)
+        
+        def worker(action: AddAction):
+            if action.status == AddAction.DONE or action.status == AddAction.SKIP:
+                return
+            print("- Initing thread " + str(action.label))
+            print("    -", str(action))
+            section = int(action.section)
+            add = Add(param).set_section(section).set_structure(structure)
+            if n_threads > 1:
+                log_file: str = os.path.join(".log", action.label)
+                if not os.path.exists(".log"):
+                    os.mkdir(".log")
+                add.set_log(Log(log_file))
+                print("    - Thread " + str(action.label) + " will use log file: " + log_file)
+            add.execute(action)
+            print("    - Thread " + str(action.label) + " finished")
+            if args.follow is not None:
+                with lock:
+                    with open(args.follow, "w") as f:
+                        f.write("\n".join([x.serialize() for x in action_list]) + "\n")
+
+        with ThreadPoolExecutor(max_workers=n_threads) as executor:
+            executor.map(worker, action_list)
+
 
     @staticmethod
     def update(args: argparse.Namespace):
-        param = CommonParam()
+        param = TaskParameters()
         if args.info:
             if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
                 print("--info requires a source")
@@ -208,24 +271,24 @@ class Actions:
         api = MoodleAPI()
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
-
+        log = Log(None)
         i = 0
         while i < len(item_list):
             item = item_list[i]
             path = os.path.normpath(os.path.join(args_output, str(item.id) + ".json"))
-            print("- Saving id " + str(item.id))
-            print("    -", str(item))
+            log.print("- Saving id " + str(item.id))
+            log.print("    -", str(item))
             try:
-                Bar.open()
+                log.open()
                 data = api.download(item.id)
                 open(path, "w").write(str(data))
                 Actions.unpack_json(path)
                 i += 1
-                Bar.done(": " + path)
+                log.done(": " + path)
             except Exception as _e:
                 print(type(_e))  # debug
                 print(_e)
-                Bar.fail(": timeout")
+                log.fail(": timeout")
 
     @staticmethod
     def rm(args: argparse.Namespace):
@@ -240,21 +303,22 @@ class Actions:
         structure = StructureLoader.load()
         item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
 
+        log = Log(None)
         i = 0
         while i < len(item_list):
             api = MoodleAPI()
             item = item_list[i]
-            print("- Removing id " + str(item.id))
-            print("    -", str(item))
+            log.print("- Removing id " + str(item.id))
+            log.print("    -" + str(item))
             try:
-                Bar.open()
+                log.open()
                 api.delete(item.id)
                 i += 1
-                Bar.done()
+                log.done()
             except Exception as _e:
                 print(type(_e))  # debug
                 print(_e)
-                Bar.fail(": timeout")
+                log.fail(": timeout")
 
     @staticmethod
     def list(args: argparse.Namespace):

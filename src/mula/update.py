@@ -1,9 +1,10 @@
 from .add import Add
 from .structure import Structure
 from .moodle_api import MoodleAPI
-from .bar import Bar
-from .param import CommonParam
+from .log import Log
+from .param import TaskParameters
 from .structure_item import StructureItem
+from .add_action import AddAction
 
 class Update:
 
@@ -27,32 +28,39 @@ class Update:
         return item_list
 
     @staticmethod
-    def from_remote(item_list: list[StructureItem], param: CommonParam, structure: Structure):
+    def from_remote(item_list: list[StructureItem], param: TaskParameters, structure: Structure):
         for item in item_list:
             print("- Updating: " + str(item))
             if item.label == "":
                 print("    - Skipping: No label found")
                 continue
-            action = Add(item.section, param, structure=structure)
-            action.add_target(item.label)
+            add = Add(param, structure)
+            
+            action = AddAction()
+            action.set_idx(item.id)
+            action.set_section(item.section)
+            action.set_label(item.label)
+            action.set_title(item.title)
+            add.execute(action)
 
     @staticmethod
     def exec_opt(item_list: list[StructureItem], args_exec_options: bool):
         i = 0
         api = MoodleAPI()
+        log = Log()
         while i < len(item_list):
             item = item_list[i]
-            print("- Change execution options for " + str(item.id))
-            print("    -", str(item))
+            log.print("- Change execution options for " + str(item.id))
+            log.print("    -", str(item))
             try:
-                Bar.open()
+                log.open()
                 if args_exec_options:
                     api.set_execution_options(item.id)
 
                 i += 1
-                Bar.done()
+                log.done()
             except Exception as _e:
                 api = MoodleAPI()
                 print(type(_e))  # debug
                 print(_e)
-                Bar.fail(": timeout")
+                log.fail(": timeout")

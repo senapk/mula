@@ -17,10 +17,12 @@ class Structure:
             self.ids_dict[qid] = item
 
     def search_by_label(self, label: str, section: Optional[int] = None) -> List[StructureItem]:
-        if label == "":
+        if label == "" :
             return []
         if section is None:
             return [item for item in self.ids_dict.values() if item.label == label]
+        if section < 0 or section >= len(self.section_item_list):
+            return []
         return [item for item in self.section_item_list[section] if item.label == label]
 
     def get_id_list(self, section: Optional[int] = None) -> List[int]:

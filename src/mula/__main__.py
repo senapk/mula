@@ -61,27 +61,38 @@ def main():
 
     parser_add = subparsers.add_parser('add', parents=[p_section, p_common], help="Add problems to Moodle")
     parser_add.add_argument("--course", "-c", type=str, help="Moodle course id or alias")
-    parser_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
-    parser_add.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
     parser_add.add_argument("--drafts", "-d", type=str, help="language extension")
-    parser_add.add_argument('targets', type=str, nargs='+', action='store', help='remote targets')
+    parser_add.add_argument("--threads", "-t", type=int, help="number of threads")
+    parser_add.add_argument('targets', type=str, nargs='*', action='store', help='label or section:label')
+
+    group_per = parser_add.add_mutually_exclusive_group(required=False)
+    group_per.add_argument("--create", type=str, metavar="file.csv", help="create a persistence file")
+    group_per.add_argument("--follow", type=str, metavar="file.csv", help="follow the persistence file")
+
+    group_add = parser_add.add_mutually_exclusive_group(required=True)
+    group_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
+    group_add.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
+    
     parser_add.set_defaults(func=Actions.add)
 
     parser_rm = subparsers.add_parser('rm', parents=[p_selection], help="Remove problems from Moodle")
-    parser_rm.add_argument("--course", "-c", type=int, help="Moodle course id")
+    parser_rm.add_argument("--course", "-c", type=str, help="Moodle course id")
     parser_rm.set_defaults(func=Actions.rm)
 
 
     parser_down = subparsers.add_parser('down', parents=[p_selection, p_out], help='Download problems to local file')
-    parser_down.add_argument("--course", "-c", type=int, help="Moodle course id")
+    parser_down.add_argument("--course", "-c", type=str, help="Moodle course id")
     parser_down.set_defaults(func=Actions.down)
 
     parser_update = subparsers.add_parser('update', parents=[p_selection, p_common], help='Update problems in Moodle')
     parser_update.add_argument("--course", "-c", type=str, help="Moodle course id")
-    parser_update.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
-    parser_update.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
-    parser_update.add_argument("--drafts", "-d", type=str, help="language extension")
     parser_update.add_argument("--info", "-i", action='store_true', help="add/update conteúdo da questão")
+    parser_update.add_argument("--drafts", "-d", type=str, help="language extension")
+
+    # create a mutually exclusive group for the --remote and --folder arguments
+    group_update = parser_update.add_mutually_exclusive_group(required=True)
+    group_update.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
+    group_update.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
     parser_update.set_defaults(func=Actions.update)
 
     args = parser.parse_args()

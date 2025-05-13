@@ -67,8 +67,8 @@ class Credentials:
             if "course_alias" in config:
                 self.course_alias = config["course_alias"]
             return self
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            pass
+        except (FileNotFoundError, json.JSONDecodeError) as _:
+            print("Error loading credentials file.")
         return self
 
     def set_alias(self, course: int, alias: str):
