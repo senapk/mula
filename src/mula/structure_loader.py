@@ -11,7 +11,7 @@ class StructureLoader:
     def load(log: Log | None = None) -> Structure:
         if log is None:
             log = Log(None)
-        api = MoodleAPI().set_log(log)
+        api = MoodleAPI()
         log.print("- Loading course structure")
         log.open()
         log.send("load")

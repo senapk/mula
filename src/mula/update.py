@@ -2,9 +2,9 @@ from .add import Add
 from .structure import Structure
 from .moodle_api import MoodleAPI
 from .log import Log
-from .param import TaskParameters
+from .task import Task, TaskParameters
 from .structure_item import StructureItem
-from .add_action import AddAction
+from .task import Task
 
 class Update:
 
@@ -28,15 +28,15 @@ class Update:
         return item_list
 
     @staticmethod
-    def from_remote(item_list: list[StructureItem], param: TaskParameters, structure: Structure):
+    def execute(item_list: list[StructureItem], param: TaskParameters, structure: Structure):
         for item in item_list:
             print("- Updating: " + str(item))
             if item.label == "":
                 print("    - Skipping: No label found")
                 continue
-            add = Add(param, structure)
+            add = Add().set_structure(structure)
             
-            action = AddAction()
+            action = Task()
             action.set_idx(item.id)
             action.set_section(item.section)
             action.set_label(item.label)

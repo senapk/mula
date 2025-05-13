@@ -1,4 +1,16 @@
-class AddAction:
+from .log import Log
+import os
+
+
+class TaskParameters:
+    def __init__(self):
+        self.duedate: str | None = None
+        self.maxfiles: int | None = None
+        self.visible: bool | None = None
+        self.exec: bool | None = None
+        self.info: bool | None = None
+
+class Task:
     TODO = "TODO" # tentar fazer
     SKIP = "SKIP" # ignorar, provavelmente não achou label
     FAIL = "FAIL" # tentou fazer, mas falhou
@@ -11,12 +23,25 @@ class AddAction:
         self.drafts: str | None = None
         self.label: str = ""
         self.title: str = ""
+        self.log: Log = Log()
+        self.param: TaskParameters = TaskParameters()
 
     def __str__(self):
         return f"status:{self.status}, section:{self.section}, label:{self.label}, title:{self.title}, index:{self.idx}"
 
+    def set_log(self, log: Log):
+        if log.destiny is not None and os.path.exists(log.destiny):
+            with open(log.destiny, 'w') as f:
+                f.write("")
+        self.log = log
+        return self
+
+    def set_param(self, params: TaskParameters):
+        self.param = params
+        return self
+
     def set_status(self, status: str):
-        if status not in [AddAction.TODO, AddAction.SKIP, AddAction.FAIL, AddAction.DONE]:
+        if status not in [Task.TODO, Task.SKIP, Task.FAIL, Task.DONE]:
             raise Exception("Invalid status")
         self.status = status
         return self

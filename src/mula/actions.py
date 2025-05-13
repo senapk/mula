@@ -1,17 +1,17 @@
-from mula.add_action import AddAction
+from mula.task import Task
 from .add import Add
 from .structure_loader import StructureLoader
 from .update import Update
 from .moodle_api import MoodleAPI
 from .log import Log
 from .viewer import Viewer
-from .param import TaskParameters
-import argparse
 from .credentials import Credentials
 from .url_handler import URLHandler
+from .task import TaskParameters
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import json
+import argparse
 from typing import Optional
 
 import os
@@ -118,13 +118,14 @@ class Actions:
                 print("Persistence file and targets are mutually exclusive")
                 return
             
-        action_list: list[AddAction] = []
+        action_list: list[Task] = []
         if args.follow is not None:
             try:
                 lines = open(args.follow).read().splitlines()
                 for line in lines:
-                    action = AddAction()
+                    action = Task()
                     action.rebuild(line)
+                    action.set_param(param)
                     action_list.append(action)
             except Exception as e:
                 print("Error reading persistence file", args.follow)
@@ -132,7 +133,7 @@ class Actions:
                 return
         else:
             for target in args.targets:
-                action = AddAction()
+                action = Task()
                 section: int = 0
                 if args.section is not None:
                     section = args.section
@@ -145,7 +146,8 @@ class Actions:
                     if args.section is not None:
                         action.set_section(args.section)
                 action.set_drafts(args.drafts)
-                action.set_status(AddAction.TODO)
+                action.set_param(param)
+                action.set_status(Task.TODO)
                 action_list.append(action)
             
         if args.create is not None:
@@ -161,21 +163,22 @@ class Actions:
 
         structure = StructureLoader.load(None)
         
-        def worker(action: AddAction):
-            if action.status == AddAction.DONE or action.status == AddAction.SKIP:
+        def worker(task: Task):
+            if task.status == Task.DONE or task.status == Task.SKIP:
                 return
-            print("- Initing thread " + str(action.label))
-            print("    -", str(action))
-            section = int(action.section)
-            add = Add(param).set_section(section).set_structure(structure)
-            if n_threads > 1:
-                log_file: str = os.path.join(".log", action.label)
+            section = int(task.section)
+            if n_threads == 1:
+                print("- Start " + str(task.label))
+                print("    -", str(task))
+            else:
+                log_file: str = os.path.join(".log", task.label)
                 if not os.path.exists(".log"):
                     os.mkdir(".log")
-                add.set_log(Log(log_file))
-                print("    - Thread " + str(action.label) + " will use log file: " + log_file)
-            add.execute(action)
-            print("    - Thread " + str(action.label) + " finished")
+                task.set_log(Log(log_file))
+                print("- Start " + str(task.label) + " with log file: " + log_file)
+            add = Add(task).set_section(section).set_structure(structure)
+            add.execute()
+            print("- Finish " + str(task.label))
             if args.follow is not None:
                 with lock:
                     with open(args.follow, "w") as f:
@@ -214,7 +217,7 @@ class Actions:
             print("No item found / selected")
             return
 
-        Update.from_remote(item_list, param, structure)
+        Update.execute(item_list, param, structure)
 
     @staticmethod
     def unpack_json(json_file: str):
