@@ -88,6 +88,7 @@ def main():
     parser_update.add_argument("--course", "-c", type=str, help="Moodle course id")
     parser_update.add_argument("--info", "-i", action='store_true', help="add/update conteúdo da questão")
     parser_update.add_argument("--drafts", "-d", type=str, help="language extension")
+    parser_update.add_argument("--threads", "-t", type=int, help="number of threads")
 
     group_per_up = parser_update.add_mutually_exclusive_group(required=False)
     group_per_up.add_argument("--create", type=str, metavar="file.csv", help="create a persistence file")

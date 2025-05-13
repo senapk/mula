@@ -214,29 +214,30 @@ class Actions:
         structure: Structure = StructureLoader.load()
 
         if args.follow is None:
-            item_list: list[Task] = Update.load_itens(args.all, args.section, args.id, args.label, structure)
+            task_list: list[Task] = Update.load_itens(args.all, args.section, args.id, args.label, structure)
         else:
             if not os.path.exists(args.follow):
                 print("Persistence file not found")
                 return
             try:
                 lines = open(args.follow).read().splitlines()
-                item_list = []
+                task_list = []
                 for line in lines:
                     task = Task()
                     task.rebuild(line)
-                    item_list.append(task)
+                    task.set_param(param)
+                    task_list.append(task)
             except Exception as e:
                 print("Error reading persistence file", args.follow)
                 print(e)
                 return
-        if len(item_list) == 0:
+        if len(task_list) == 0:
             print("No item found / selected")
             return
         
         if args.create is not None:
             tasks: list[Task] = []
-            for item in item_list:
+            for item in task_list:
                 task = Task()
                 task.set_label(item.label)
                 task.set_id(item.id)
@@ -251,41 +252,40 @@ class Actions:
             print("You can use --follow", args.create)
             return
 
-        for task in item_list:
-            print("- Updating: " + str(task))
-            if task.label == "":
-                print("    - Skipping: No label found")
-                continue
+        # for task in task_list:
+        #     print("- Updating: " + str(task))
+        #     if task.label == "":
+        #         print("    - Skipping: No label found")
+        #         continue
+        #     add = Add(task).set_structure(structure)
+        #     add.execute()
+        #     with open(args.follow, "w") as f:
+        #         f.write("\n".join([x.serialize() for x in task_list]) + "\n")
+        
+        n_threads: int = 1 if args.threads is None else args.threads
+        lock = threading.Lock()
+
+        def worker(task: Task):
+            if task.status == Task.DONE or task.status == Task.SKIP:
+                return
+            if n_threads == 1:
+                print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title))
+            else:
+                log_file: str = os.path.join(".log", str(task.id))
+                if not os.path.exists(".log"):
+                    os.mkdir(".log")
+                task.set_log(Log(log_file))
+                print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title) + " with log file: " + log_file)
             add = Add(task).set_structure(structure)
             add.execute()
-            with open(args.follow, "w") as f:
-                f.write("\n".join([x.serialize() for x in item_list]) + "\n")
-        
-        # lock = threading.Lock()
+            print("- Finish " + str(task.label))
+            if args.follow is not None:
+                with lock:
+                    with open(args.follow, "w") as f:
+                        f.write("\n".join([x.serialize() for x in task_list]) + "\n")
 
-        # def worker(task: Task):
-        #     if task.status == Task.DONE or task.status == Task.SKIP:
-        #         return
-        #     section = int(task.section)
-        #     if n_threads == 1:
-        #         print("- Start " + str(task.label))
-        #         print("    -", str(task))
-        #     else:
-        #         log_file: str = os.path.join(".log", task.label)
-        #         if not os.path.exists(".log"):
-        #             os.mkdir(".log")
-        #         task.set_log(Log(log_file))
-        #         print("- Start " + str(task.label) + " with log file: " + log_file)
-        #     add = Add(task).set_section(section).set_structure(structure)
-        #     add.execute()
-        #     print("- Finish " + str(task.label))
-        #     if args.follow is not None:
-        #         with lock:
-        #             with open(args.follow, "w") as f:
-        #                 f.write("\n".join([x.serialize() for x in action_list]) + "\n")
-
-        # with ThreadPoolExecutor(max_workers=n_threads) as executor:
-        #     executor.map(worker, action_list)
+        with ThreadPoolExecutor(max_workers=n_threads) as executor:
+            executor.map(worker, task_list)
 
     @staticmethod
     def unpack_json(json_file: str):

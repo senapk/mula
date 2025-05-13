@@ -98,7 +98,7 @@ class Add:
             item = None if len(itens_label_match) == 0 else itens_label_match[0]    
             self.task.id = item.id if item is not None else 0
         else:
-            task.log.print("    - Updating: " + str(task.id) + ": " + task.title)
+            task.log.print("    - Updating: " + str(task.id) + ": " + task.title + ": using label " + task.label)
         try:
             self.apply_action(vpl)
             task.set_status(Task.DONE)

@@ -21,6 +21,11 @@ class MoodleAPI:
     def set_task(self, task: Task):
         self.task = task
         return self
+    
+    def get_task(self):
+        if self.task is None:
+            raise Exception("Task not set")
+        return self.task
 
     def open_url(self, url: str, data_files: Optional[Any] = None):
         if MoodleAPI.default_timeout != 0:
@@ -45,17 +50,17 @@ class MoodleAPI:
             exit(0)
 
     def delete(self, qid: int):
-        self.task.log.send("load")
+        self.get_task().log.send("load")
         self.open_url(self.urlHandler.delete_vpl(qid))
-        self.task.log.send("submit")
+        self.get_task().log.send("submit")
         self.browser.select_form(nr=0)
         self.browser.submit_selected()
 
     def download(self, vplid: int) -> JsonVPL:
         url = self.urlHandler.view_vpl(vplid)
-        self.task.log.send("open")
+        self.get_task().log.send("open")
         self.open_url(url)
-        self.task.log.send("parse")
+        self.get_task().log.send("parse")
         soup = self.browser.page
         arqs = soup.findAll('h4', {'id': lambda value: value and value.startswith("fileid")})
         title = soup.find('a', {'href': self.browser.get_url()}).get_text()
@@ -91,7 +96,7 @@ class MoodleAPI:
         self.browser["duedate[minute]"] = str(int(minute))
 
     def update_duedate_only(self, url: str, duedate: Optional[str] = None):
-        self.task.log.send("duedate")
+        self.get_task().log.send("duedate")
         self.open_url(url)
         self.browser.select_form(nr=0)
         self.set_duedate_field_in_form(duedate)
@@ -100,24 +105,24 @@ class MoodleAPI:
 
     def send_basic_info(self, url: str, vpl: Optional[JsonVPL]) -> int:
         self.open_url(url)
-        param = self.task.param
+        param = self.get_task().param
         self.browser.select_form(nr=0)
 
         if vpl is not None and param.info == True:
-            self.task.log.send("description")
+            self.get_task().log.send("description")
             self.browser['name'] = vpl.title
             self.browser['introeditor[text]'] = vpl.description
     
         if param.visible is not None:
-            self.task.log.send("visible")
+            self.get_task().log.send("visible")
             self.browser['visible'] = '1' if param.visible else '0'
 
         if param.duedate is not None:
-            self.task.log.send("duedate")
+            self.get_task().log.send("duedate")
             self.set_duedate_field_in_form(param.duedate)
 
-        if param.maxfiles is not None:
-            self.task.log.send("maxfiles")
+        if param.maxfiles is not None and vpl is not None:
+            self.get_task().log.send("maxfiles")
             self.browser['maxfiles'] = max(len(vpl.keep), int(param.maxfiles))
     
         self.browser.form.choose_submit("submitbutton")
