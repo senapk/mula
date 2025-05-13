@@ -8,6 +8,7 @@ from .viewer import Viewer
 from .credentials import Credentials
 from .url_handler import URLHandler
 from .task import TaskParameters
+from .structure import Structure
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import json
@@ -123,32 +124,32 @@ class Actions:
             try:
                 lines = open(args.follow).read().splitlines()
                 for line in lines:
-                    action = Task()
-                    action.rebuild(line)
-                    action.set_param(param)
-                    action_list.append(action)
+                    task = Task()
+                    task.rebuild(line)
+                    task.set_param(param)
+                    action_list.append(task)
             except Exception as e:
                 print("Error reading persistence file", args.follow)
                 print(e)
                 return
         else:
             for target in args.targets:
-                action = Task()
+                task = Task()
                 section: int = 0
                 if args.section is not None:
                     section = args.section
                 if ":" in target:
                     section, label = target.split(":")
-                    action.set_section(int(section))
-                    action.set_label(label)
+                    task.set_section(int(section))
+                    task.set_label(label)
                 else:
-                    action.set_label(target)
+                    task.set_label(target)
                     if args.section is not None:
-                        action.set_section(args.section)
-                action.set_drafts(args.drafts)
-                action.set_param(param)
-                action.set_status(Task.TODO)
-                action_list.append(action)
+                        task.set_section(args.section)
+                task.set_drafts(args.drafts)
+                task.set_param(param)
+                task.set_status(Task.TODO)
+                action_list.append(task)
             
         if args.create is not None:
             open(args.create, "w").write("\n".join([x.serialize() for x in action_list]))
@@ -156,13 +157,13 @@ class Actions:
             print("You can use --follow", args.create)
             return
 
-        lock = threading.Lock()
 
         n_threads: int = 1 if args.threads is None else args.threads
         print("Threads: " + str(n_threads))
 
-        structure = StructureLoader.load(None)
+        structure: Structure = StructureLoader.load(None)
         
+        lock = threading.Lock()
         def worker(task: Task):
             if task.status == Task.DONE or task.status == Task.SKIP:
                 return
@@ -210,14 +211,81 @@ class Actions:
             print("Drafts only available with --info")
             return
 
-        structure = StructureLoader.load()
-        item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
+        structure: Structure = StructureLoader.load()
 
+        if args.follow is None:
+            item_list: list[Task] = Update.load_itens(args.all, args.section, args.id, args.label, structure)
+        else:
+            if not os.path.exists(args.follow):
+                print("Persistence file not found")
+                return
+            try:
+                lines = open(args.follow).read().splitlines()
+                item_list = []
+                for line in lines:
+                    task = Task()
+                    task.rebuild(line)
+                    item_list.append(task)
+            except Exception as e:
+                print("Error reading persistence file", args.follow)
+                print(e)
+                return
         if len(item_list) == 0:
             print("No item found / selected")
             return
+        
+        if args.create is not None:
+            tasks: list[Task] = []
+            for item in item_list:
+                task = Task()
+                task.set_label(item.label)
+                task.set_id(item.id)
+                task.set_section(item.section)
+                task.set_drafts(args.drafts)
+                task.set_param(param)
+                task.set_status(Task.TODO)
+                task.set_title(item.title)
+                tasks.append(task)
+            open(args.create, "w").write("\n".join([x.serialize() for x in tasks]))
+            print("Persistence file created: " + args.create)
+            print("You can use --follow", args.create)
+            return
 
-        Update.execute(item_list, param, structure)
+        for task in item_list:
+            print("- Updating: " + str(task))
+            if task.label == "":
+                print("    - Skipping: No label found")
+                continue
+            add = Add(task).set_structure(structure)
+            add.execute()
+            with open(args.follow, "w") as f:
+                f.write("\n".join([x.serialize() for x in item_list]) + "\n")
+        
+        # lock = threading.Lock()
+
+        # def worker(task: Task):
+        #     if task.status == Task.DONE or task.status == Task.SKIP:
+        #         return
+        #     section = int(task.section)
+        #     if n_threads == 1:
+        #         print("- Start " + str(task.label))
+        #         print("    -", str(task))
+        #     else:
+        #         log_file: str = os.path.join(".log", task.label)
+        #         if not os.path.exists(".log"):
+        #             os.mkdir(".log")
+        #         task.set_log(Log(log_file))
+        #         print("- Start " + str(task.label) + " with log file: " + log_file)
+        #     add = Add(task).set_section(section).set_structure(structure)
+        #     add.execute()
+        #     print("- Finish " + str(task.label))
+        #     if args.follow is not None:
+        #         with lock:
+        #             with open(args.follow, "w") as f:
+        #                 f.write("\n".join([x.serialize() for x in action_list]) + "\n")
+
+        # with ThreadPoolExecutor(max_workers=n_threads) as executor:
+        #     executor.map(worker, action_list)
 
     @staticmethod
     def unpack_json(json_file: str):

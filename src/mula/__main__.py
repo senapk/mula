@@ -89,10 +89,14 @@ def main():
     parser_update.add_argument("--info", "-i", action='store_true', help="add/update conteúdo da questão")
     parser_update.add_argument("--drafts", "-d", type=str, help="language extension")
 
-    # create a mutually exclusive group for the --remote and --folder arguments
-    group_update = parser_update.add_mutually_exclusive_group(required=True)
-    group_update.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
-    group_update.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
+    group_per_up = parser_update.add_mutually_exclusive_group(required=False)
+    group_per_up.add_argument("--create", type=str, metavar="file.csv", help="create a persistence file")
+    group_per_up.add_argument("--follow", type=str, metavar="file.csv", help="follow the persistence file")
+
+    group_add_up = parser_update.add_mutually_exclusive_group(required=True)
+    group_add_up.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
+    group_add_up.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
+
     parser_update.set_defaults(func=Actions.update)
 
     args = parser.parse_args()

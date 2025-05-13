@@ -3,7 +3,7 @@ from .structure import Structure
 from .moodle_api import MoodleAPI
 from .log import Log
 from .url_handler import URLHandler
-from .structure_item import StructureItem
+from .task import Task
 
 
 class StructureLoader:
@@ -42,17 +42,17 @@ class StructureLoader:
         return [section['aria-label'] for section in childrens]
 
     @staticmethod
-    def _make_entries_by_section(soup, childrens) -> List[List[StructureItem]]:
-        output: List[List[StructureItem]] = []
+    def _make_entries_by_section(soup, childrens) -> List[List[Task]]:
+        output: List[List[Task]] = []
         for section_index, section in enumerate(childrens):
             comp = ' > div.content > ul > li > div > div.mod-indent-outer > div > div.activityinstance > a'
             activities = soup.select('#' + section['id'] + comp)
-            section_entries: List[StructureItem] = []
+            section_entries: List[Task] = []
             for activity in activities:
                 if not URLHandler.is_vpl_url(activity['href']):
                     continue
                 qid: int = int(URLHandler.parse_id(activity['href']))
                 title: str = activity.get_text().replace(' Laboratório Virtual de Programação', '')
-                section_entries.append(StructureItem(section_index, qid, title))
+                section_entries.append(Task().set_section(section_index).set_id(qid).set_title(title).set_label_from_title())
             output.append(section_entries)
         return output

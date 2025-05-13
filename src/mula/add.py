@@ -1,6 +1,5 @@
 from .moodle_api import MoodleAPI
 from .json_tools import JsonVplLoader, JsonVPL
-from .structure_item import StructureItem
 from .structure import Structure
 from .credentials import Credentials
 from .task import Task
@@ -44,20 +43,20 @@ class Add:
             vpl.required = vpl.drafts[self.task.drafts]
             api.send_files(vpl, qid)
 
-    def apply_action(self, vpl: JsonVPL, item: None | StructureItem):
+    def apply_action(self, vpl: JsonVPL):
         api: MoodleAPI = self.api
         task: Task = self.task
         if self.structure is None:
             task.log.print("error: structure not set")
             return
 
-        if item is not None:
-            task.log.print("    - Updating: Label found in " + str(item.id) + ": " + item.title)
-            url = api.urlHandler.update_vpl(item.id)
+        if task.id != 0:
+            task.log.print("    - Updating: Label found in " + str(task.id) + ": " + task.title)
+            url = api.urlHandler.update_vpl(task.id)
             task.log.open()
             self.send_basic(api, vpl, url)
-            self.update_extra(api, vpl, item.id)
-            self.set_keep(api, item.id, len(vpl.keep))
+            self.update_extra(api, vpl, task.id)
+            self.set_keep(api, task.id, len(vpl.keep))
             task.log.done()
         else:  # new
             task.log.print("    - Creating: New entry with title: " + vpl.title)
@@ -86,16 +85,22 @@ class Add:
             task.log.print("error: structure not set")
             task.set_status(Task.FAIL)
             return
-        label_to_search = StructureItem.parse_label(vpl.title)
-        itens_label_match: list[StructureItem] = self.structure.search_by_label(label_to_search, self.section)
-        if len(itens_label_match) == 0:
-            task.log.print("    - No match found")
-        for item in itens_label_match:
-            print("    - Found: " + str(item.id) + ": " + item.title)
-        item = None if len(itens_label_match) == 0 else itens_label_match[0]    
-
+        
+        # se o id é 0, é operação de ADD, deve veriricar se existe alguém nessa seção com esse label e fazer o update
+        if task.id == 0:
+            label_to_search = task.label
+            print("    - Searching for label: " + label_to_search)
+            itens_label_match: list[Task] = self.structure.search_by_label(label_to_search, self.section)
+            if len(itens_label_match) == 0:
+                task.log.print("    - No match found")
+            for item in itens_label_match:
+                print("    - Found: " + str(item.id) + ": " + item.title)
+            item = None if len(itens_label_match) == 0 else itens_label_match[0]    
+            self.task.id = item.id if item is not None else 0
+        else:
+            task.log.print("    - Updating: " + str(task.id) + ": " + task.title)
         try:
-            self.apply_action(vpl, item)
+            self.apply_action(vpl)
             task.set_status(Task.DONE)
         except Exception as e:
             task.set_status(Task.FAIL)
