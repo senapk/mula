@@ -135,10 +135,6 @@ class MoodleAPI:
             qid = URLHandler.parse_id(url2)
         return int(qid)
 
-    def _send_vpl_files(self, url: str, vpl_files: List[JsonFile]):
-        params = {'files': vpl_files, 'comments': ''}
-        files = json.dumps(params, default=self.__dumper, indent=2)
-        self.open_url(url, files)
 
     def set_keep(self, qid: int, keep_size: int):
         self.open_url(self.urlHandler.keep_files(qid))
@@ -146,6 +142,11 @@ class MoodleAPI:
         for index in range(4, 4 + keep_size):
             self.browser["keepfile" + str(index)] = "1"
         self.browser.submit_selected()
+        
+    def _send_vpl_files(self, url: str, vpl_files: List[JsonFile]):
+        params = {'files': vpl_files, 'comments': ''}
+        files = json.dumps(params, default=self.__dumper, indent=2)
+        self.open_url(url, files)
 
     def send_files(self, vpl: JsonVPL, qid: int):
         self._send_vpl_files(self.urlHandler.execution_files(qid), vpl.keep + vpl.upload)  # don't change this order

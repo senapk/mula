@@ -5,7 +5,7 @@ from .credentials import Credentials
 from .task import Task
 
 
-class Add:
+class Publish:
     def __init__(self, task: Task):
         self.section: int = 0
         self.credentials: Credentials = Credentials.load_credentials()
@@ -47,7 +47,7 @@ class Add:
         api: MoodleAPI = self.api
         task: Task = self.task
         if self.structure is None:
-            task.log.print("error: structure not set")
+            task.log.print("    - Error: structure not set")
             return
 
         if task.id != 0:
@@ -79,10 +79,10 @@ class Add:
             vpl, err = loader.load_remote(task.label)
         if err:
             task.set_status(Task.FAIL)
-            task.log.print("error:" + err)
+            task.log.print("    - Error:" + err)
             return
         if self.structure is None:
-            task.log.print("error: structure not set")
+            task.log.print("    - Error: structure not set")
             task.set_status(Task.FAIL)
             return
         
@@ -104,5 +104,5 @@ class Add:
             task.set_status(Task.DONE)
         except Exception as e:
             task.set_status(Task.FAIL)
-            task.log.print("error:" + str(e))
+            task.log.print("    - Error:" + str(e))
         return

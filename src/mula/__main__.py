@@ -3,10 +3,13 @@ from __future__ import annotations
 import argparse
 import sys
 
+from .Add import Add
+
 
 from .actions import Actions
 from .credentials import Credentials
 from .moodle_api import MoodleAPI
+from .update import Update
 from .__init__ import __version__
 
 
@@ -73,7 +76,7 @@ def main():
     group_add.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     group_add.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
     
-    parser_add.set_defaults(func=Actions.add)
+    parser_add.set_defaults(func=Add.add)
 
     parser_rm = subparsers.add_parser('rm', parents=[p_selection], help="Remove problems from Moodle")
     parser_rm.add_argument("--course", "-c", type=str, help="Moodle course id")
@@ -98,7 +101,7 @@ def main():
     group_add_up.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     group_add_up.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
 
-    parser_update.set_defaults(func=Actions.update)
+    parser_update.set_defaults(func=Update.update)
 
     args = parser.parse_args()
 

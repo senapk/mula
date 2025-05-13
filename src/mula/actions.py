@@ -1,5 +1,5 @@
 from mula.task import Task
-from .add import Add
+from .publish import Publish
 from .structure_loader import StructureLoader
 from .update import Update
 from .moodle_api import MoodleAPI
@@ -74,219 +74,6 @@ class Actions:
         if len(credentials.course_alias) == 0:
             print("  No aliases set")
 
-
-        
-    @staticmethod
-    def check_and_set_for_add_update(args: argparse.Namespace, param: TaskParameters) -> bool:
-        if args.course is None:
-            print("course index not defined")
-            print("use --course <course id>")
-            return False
-
-        credentials = Credentials.load_credentials()
-        credentials.set_remote(args.remote)
-        credentials.folder_db = args.folder
-        credentials.set_course(args.course)
-
-        param.duedate = "0" if args.duedate is None else args.duedate
-        param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
-        param.info = True
-        param.exec = True
-
-        if args.visible is not None:
-            param.visible = True if args.visible == 1 else False
-
-        return True
-
-    @staticmethod
-    def add(args: argparse.Namespace):
-        param = TaskParameters()
-        
-        if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
-            print("you must set remote database OR local folder")
-            print("use --remote fup | ed | poo")
-            print("or  --folder <local base folder>")
-            return
-        
-        if not Actions.check_and_set_for_add_update(args, param):
-            return
-        
-        if args.follow is not None:
-            if not os.path.exists(args.follow):
-                print("Persistence file not found")
-                return
-            if len(args.targets) != 0:
-                print("Persistence file and targets are mutually exclusive")
-                return
-            
-        action_list: list[Task] = []
-        if args.follow is not None:
-            try:
-                lines = open(args.follow).read().splitlines()
-                for line in lines:
-                    task = Task()
-                    task.rebuild(line)
-                    task.set_param(param)
-                    action_list.append(task)
-            except Exception as e:
-                print("Error reading persistence file", args.follow)
-                print(e)
-                return
-        else:
-            for target in args.targets:
-                task = Task()
-                section: int = 0
-                if args.section is not None:
-                    section = args.section
-                if ":" in target:
-                    section, label = target.split(":")
-                    task.set_section(int(section))
-                    task.set_label(label)
-                else:
-                    task.set_label(target)
-                    if args.section is not None:
-                        task.set_section(args.section)
-                task.set_drafts(args.drafts)
-                task.set_param(param)
-                task.set_status(Task.TODO)
-                action_list.append(task)
-            
-        if args.create is not None:
-            open(args.create, "w").write("\n".join([x.serialize() for x in action_list]))
-            print("Persistence file created: " + args.create)
-            print("You can use --follow", args.create)
-            return
-
-
-        n_threads: int = 1 if args.threads is None else args.threads
-        print("Threads: " + str(n_threads))
-
-        structure: Structure = StructureLoader.load(None)
-        
-        lock = threading.Lock()
-        def worker(task: Task):
-            if task.status == Task.DONE or task.status == Task.SKIP:
-                return
-            section = int(task.section)
-            if n_threads == 1:
-                print("- Start " + str(task.label))
-                print("    -", str(task))
-            else:
-                log_file: str = os.path.join(".log", task.label)
-                if not os.path.exists(".log"):
-                    os.mkdir(".log")
-                task.set_log(Log(log_file))
-                print("- Start " + str(task.label) + " with log file: " + log_file)
-            add = Add(task).set_section(section).set_structure(structure)
-            add.execute()
-            print("- Finish " + str(task.label))
-            if args.follow is not None:
-                with lock:
-                    with open(args.follow, "w") as f:
-                        f.write("\n".join([x.serialize() for x in action_list]) + "\n")
-
-        with ThreadPoolExecutor(max_workers=n_threads) as executor:
-            executor.map(worker, action_list)
-
-
-    @staticmethod
-    def update(args: argparse.Namespace):
-        param = TaskParameters()
-        if args.info:
-            if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
-                print("--info requires a source")
-                print("you must set remote database OR local folder")
-                print("use --remote fup | ed | poo")
-                print("or  --folder <local base folder>")
-                return
-
-        if not Actions.check_and_set_for_add_update(args, param):
-            return
-        
-        if all([x is None for x in [args.drafts, args.duedate, args.maxfiles, args.info, args.exec, args.visible]]):
-            print("Nothing to update, please provide at least one action(--info, --duedate, --visible, ...")
-            return
-                
-        if args.drafts is not None and args.info is None:
-            print("Drafts only available with --info")
-            return
-
-        structure: Structure = StructureLoader.load()
-
-        if args.follow is None:
-            task_list: list[Task] = Update.load_itens(args.all, args.section, args.id, args.label, structure)
-        else:
-            if not os.path.exists(args.follow):
-                print("Persistence file not found")
-                return
-            try:
-                lines = open(args.follow).read().splitlines()
-                task_list = []
-                for line in lines:
-                    task = Task()
-                    task.rebuild(line)
-                    task.set_param(param)
-                    task_list.append(task)
-            except Exception as e:
-                print("Error reading persistence file", args.follow)
-                print(e)
-                return
-        if len(task_list) == 0:
-            print("No item found / selected")
-            return
-        
-        if args.create is not None:
-            tasks: list[Task] = []
-            for item in task_list:
-                task = Task()
-                task.set_label(item.label)
-                task.set_id(item.id)
-                task.set_section(item.section)
-                task.set_drafts(args.drafts)
-                task.set_param(param)
-                task.set_status(Task.TODO)
-                task.set_title(item.title)
-                tasks.append(task)
-            open(args.create, "w").write("\n".join([x.serialize() for x in tasks]))
-            print("Persistence file created: " + args.create)
-            print("You can use --follow", args.create)
-            return
-
-        # for task in task_list:
-        #     print("- Updating: " + str(task))
-        #     if task.label == "":
-        #         print("    - Skipping: No label found")
-        #         continue
-        #     add = Add(task).set_structure(structure)
-        #     add.execute()
-        #     with open(args.follow, "w") as f:
-        #         f.write("\n".join([x.serialize() for x in task_list]) + "\n")
-        
-        n_threads: int = 1 if args.threads is None else args.threads
-        lock = threading.Lock()
-
-        def worker(task: Task):
-            if task.status == Task.DONE or task.status == Task.SKIP:
-                return
-            if n_threads == 1:
-                print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title))
-            else:
-                log_file: str = os.path.join(".log", str(task.id))
-                if not os.path.exists(".log"):
-                    os.mkdir(".log")
-                task.set_log(Log(log_file))
-                print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title) + " with log file: " + log_file)
-            add = Add(task).set_structure(structure)
-            add.execute()
-            print("- Finish " + str(task.label))
-            if args.follow is not None:
-                with lock:
-                    with open(args.follow, "w") as f:
-                        f.write("\n".join([x.serialize() for x in task_list]) + "\n")
-
-        with ThreadPoolExecutor(max_workers=n_threads) as executor:
-            executor.map(worker, task_list)
-
     @staticmethod
     def unpack_json(json_file: str):
         try:
@@ -341,7 +128,7 @@ class Actions:
 
         api = MoodleAPI()
         structure = StructureLoader.load()
-        item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
+        item_list = Update.load_itens_from_structure(args.all, args.section, args.id, args.label, structure)
         log = Log(None)
         i = 0
         while i < len(item_list):
@@ -372,12 +159,12 @@ class Actions:
             credentials.set_course(args.course)
 
         structure = StructureLoader.load()
-        item_list = Update.load_itens(args.all, args.section, args.id, args.label, structure)
+        item_list: list[Task] = Update.load_itens_from_structure(args.all, args.section, args.id, args.label, structure)
 
         log = Log(None)
         i = 0
         while i < len(item_list):
-            api = MoodleAPI()
+            api = MoodleAPI().set_task(item_list[i])
             item = item_list[i]
             log.print("- Removing id " + str(item.id))
             log.print("    -" + str(item))
@@ -400,7 +187,6 @@ class Actions:
         else:
             credentials = Credentials.load_credentials()
             credentials.set_course(args.course)
-
 
         args_section: Optional[int] = args.section
         args_url: bool = args.url

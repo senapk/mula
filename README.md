@@ -29,6 +29,7 @@ pip install mula
 ```
 
 ### Instalação no Linux
+
 ```bash
 
 pip install mula
@@ -42,60 +43,51 @@ echo "export PATH=$PATH:~/.local/bin" >> ~/.bashrc
 ### Modo rápido
 
 ```bash
-mula -u <usuario> -p <senha> -i <numero_do_curso> -d <fup | ed | poo> list
-```
+# fazer autenticação e salvar credenciais
+mula auth
 
-Para obter o número do curso, basta olhar o último número na URL do seu curso do moodle.
+# listar seus cursos
+mula courses
 
-![image](https://gist.github.com/assets/4747652/f6f81a28-d3dc-4d30-ac20-e90ff85ddcdd)
+# criar um alias para um curso
+mula alias <nome_do_alias> <id_do_curso>
 
-Se não passar o parâmetro -p ou --password, a senha será perguntada de forma interativa.
+# listar um curso
+mula list <nome_do_alias ou id_do_curso>
 
-Agora basta dar um `mula -u <usuario> -p <senha> -i <indice_do_curso> -d <fup | ed | poo> list` para listar o conteúdo do seu curso.
+# adicionar questões usando repositório remoto fup | ed | poo
+mula add -c <alias> -r <repositorio> sessao:label sessao:label ...
+# exemplo
+# mula add -c meu_fup -r fup 3:monica 5:opala 7:baruel
 
-## Facilitando acesso
+# adicionar questões usando repositório local
+mula add -c <alias> -f <folder> sessao:label sessao:label ...
+# exemplo
+# mula add -c meu_fup -f arcade/base 3:monica 5:opala 7:baruel
 
-### Alias
+# uma ação de add ou update gera automaticamente um arquivo follow.csv onde você pode
+# acompanhar o andamento da publicação das questões, se tiver que retomar o processo
+# você pode usar o comando mula --follow <arquivo> para continuar o processo
+mula add -c <alias> -f <folder> --follow follow.csv
 
-Você pode criar um alias para o comando, para não precisar passar os parâmetros toda vez.
+# também pode passar --threads para usar múltiplas threads
+mula add -c <alias> -f <folder> --follow follow.csv --threads 4
 
-```bash
-#arquivo .bashrc
-alias meucurso='mula -u seu_login -p sua_senha -i indice_do_curso -d fup'
+# o update seguie o mesmo modelo do add, mas ao invés de adicionar questões
+# você precisa informar o que quer atualizar
+# --ids <ids> para atualizar questões específicas
+# --sections <ids> para atualizar todas as questões de uma seção
+# --all para atualizar todas as questões do curso
+# --labels <labels> para atualizar questões específicas
 
-#exemplo
-alias fupisfun='mula -u 00427166322 -p minha_senha -i 3 -d fup'
-```
+# E também pode escolher o que quer atualizar
+# --info para atualizar as informações da questão
+# --drafts para enviar os arquivos de rascunho
+# --duedate para atualizar a data de fechamento
+# --exec para habilitar as opções de execução (run, avaliate, debug)
+# --visible para mostrar ou esconder a questões.
+# --maxfiles para definir o número máximo de arquivos que o aluno pode enviar.
 
-Então, basta dar um `meucurso list` para listar o conteúdo do seu curso.
-
-### Arquivo de configuração
-
-Se preferir, pode salvar os dados em um arquivo de configuração.
-
-```json
-{
-    "username": "seu_login",
-    "password": "sua_senha",
-    "index": "indice_do_curso",
-    "database": "fup | ed | poo",
-}
-```
-
-Se não adicionar o password, o script vai perguntar sua senha em cada operação. Agora basta dar um:
-
-```bash
-mula -c arquivo.json list
-```
-
-## Listando estrutura de um curso
-
-Supondo que você criou o alias `meucurso`, vamos continuar os exemplos com ele.
-
-Para saber se está funcionando, você pode listar as questões do seu curso.
-
-``` bash
-meucurso list
 ```
 
 ## Adicionando
@@ -148,7 +140,7 @@ Quais problemas pode ser
 
 Opções podem ser
 
-- `--content` ou `-c` para atualizar o conteúdo das questões pelo conteúdo do repositório remoto
+- `--info` para atualizar o conteúdo das questões pelo conteúdo do repositório remoto
 - `--duedate 2021:5:28:11:30` para definir o horário de fechamento da atividade, ou `0` para desabilitar
 - `--exec` para habilitar as opções de execução (run, avaliate, debug)
 - `--visible <0 | 1>` para mostrar ou esconder a questões.
