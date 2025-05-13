@@ -90,7 +90,19 @@ mula add -c <alias> -f <folder> --follow follow.csv --threads 4
 
 ```
 
-## Adicionando
+## Create e Follow
+
+Nos comandos de adicionar e atualizar questões, você pode usar a opção `--follow` para criar um arquivo CSV com o andamento do processo. Você pode usar esse arquivo para continuar o processo de adição ou atualização de questões.
+
+Esse arquivo é criado automaticamente quando você usa o comando `add` ou `update`. Caso queira apenas criar o arquivo, você pode usar o comando `--create` para criar o arquivo CSV sem adicionar ou atualizar imediatamente as questões.
+
+Analizando o arquivo criado, você pode decidir quais ações devem ser feitas (TODO), quais quer pular(SKIP), quais deram erro(FAIL) e quais foram concluídas(DONE).
+
+Olhando o arquivo durante a execução, é possível ver o andamento das threads em tempo real.
+
+Também é possível definir manualmente qual a label cadas arquivo vai utilizar no update para atualizar a questão, caso a questão antiga esteja num modelo sem a label ou a label tenha sido alterada.
+
+```bash
 
 ### Utilizando labels
 
