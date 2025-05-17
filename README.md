@@ -78,7 +78,7 @@ mula add -c <alias> -f <folder> --follow follow.csv --threads 4
 # --ids <ids> para atualizar questões específicas
 # --sections <ids> para atualizar todas as questões de uma seção
 # --all para atualizar todas as questões do curso
-# --labels <labels> para atualizar questões específicas
+# --label <labels> para atualizar questões específicas
 
 # E também pode escolher o que quer atualizar
 # --info para atualizar as informações da questão
@@ -165,7 +165,8 @@ Exemplos:
 meucurso update -s 3 --visible 0
 
 # atualizar o conteúdo de todas as questões do curso usando o repositório remoto e também mudar o máximo de arquivos para 5
-meucurso update --all --content --maxfiles 5
+meucurso update --all --info --maxfiles 5 --remote [fup | ed | poo]
+#vode tambem pode utilizar um repositorio local ai seria --folder ./local do arquivo
 
 # mudar a data de fechamento das questões da seção 4
 meucurso update -s 4 --duedate 2021:5:28:11:30

@@ -135,7 +135,6 @@ class MoodleAPI:
             qid = URLHandler.parse_id(url2)
         return int(qid)
 
-
     def set_keep(self, qid: int, keep_size: int):
         self.open_url(self.urlHandler.keep_files(qid))
         self.browser.select_form(nr=0)
@@ -177,6 +176,7 @@ class MoodleAPI:
         self.set_keep(qid,0)
 
     def set_execution_options(self, qid: int):
+
         self.open_url(self.urlHandler.execution_options(qid))
 
         self.browser.select_form(nr=0)
@@ -189,6 +189,8 @@ class MoodleAPI:
         # self.browser.select_form(action='executionoptions.php')
         self.browser['automaticgrading'] = "1"
         self.browser.submit_selected()
+
+
 
     @staticmethod
     def __dumper(obj):
