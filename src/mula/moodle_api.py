@@ -148,10 +148,33 @@ class MoodleAPI:
         files = json.dumps(params, default=self.__dumper, indent=2)
         self.open_url(url, files)
 
+    def get_removed_files(old: JsonVPL, new: JsonVPL) -> dict:
+        def removed_names(old_list, new_list):
+            new_names = {f.name for f in new_list}
+            return [f.name for f in old_list if f.name not in new_names]
+
+        removed = {
+            'upload': removed_names(old.upload, new.upload),
+            'required': removed_names(old.required, new.required),
+            'keep': removed_names(old.keep, new.keep),
+            'drafts': {}
+        }
+
+        for draft_name, old_files in old.drafts.items():
+            new_files = new.drafts.get(draft_name, [])
+            removed['drafts'][draft_name] = removed_names(old_files, new_files)
+
+        return removed
+
     def send_files(self, vpl: JsonVPL, qid: int):
         self._send_vpl_files(self.urlHandler.execution_files(qid), vpl.keep + vpl.upload)  # don't change this order
+
         if len(vpl.required) > 0:
             self._send_vpl_files(self.urlHandler.required_files(qid), vpl.required)
+
+        diferenca = self.get_removed_files(self.download(qid),vpl)
+
+        self.set_keep(qid,0)
 
     def set_execution_options(self, qid: int):
         self.open_url(self.urlHandler.execution_options(qid))
