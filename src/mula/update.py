@@ -9,6 +9,7 @@ import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import argparse
+from .text import Text
 
 class Update:
 
@@ -53,7 +54,6 @@ class Update:
             task.set_param(param)
             task.set_status(Task.TODO)
         open(create, "w").write("\n".join([x.serialize() for x in task_list]))
-        print("Persistence file created: " + create)
 
     @staticmethod
     def execute(n_threads: int | None, task_list: list[Task], structure: Structure, follow: str | None):
@@ -65,7 +65,7 @@ class Update:
                 
                 return
             if n_threads == 1:
-                print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title))
+                print(Text.format("{y}", "- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title)))
             else:
                 log_file: str = os.path.join(".log", str(task.id))
                 if not os.path.exists(".log"):
@@ -94,17 +94,23 @@ class Update:
                 return False
 
         if args.course is None:
-            print("course index not defined")
-            print("use --course <course id>")
+            print(Text().addf("y", "course index not defined"))
+            print(Text().addf("y", "use --course <course id>"))
             return False
         
         if not Update.any_action(args):
-            print("Nothing to update, please provide at least one action(--info, --duedate, --visible, ...")
+            print(Text().addf("y", "Nothing to update, please provide at least one action(--info, --duedate, --visible, ..."))
             return False
                 
         if args.drafts is not None and args.info is None:
-            print("Drafts only available with --info")
+            print(Text().addf("y", "Drafts only available with --info"))
             return False
+
+        if args.follow is None:
+            if not args.all and (args.section is None and args.id is None and args.label is None):
+                print(Text().addf("y", "You must provide at least one target [--all | --section ... | --id ... | --label ...]"))
+                return False
+        
         
         return True
 
@@ -141,12 +147,15 @@ class Update:
         if args.create is not None or args.follow is None:
             if follow is None:
                 create: str = "follow.csv"
+                if args.create is not None:
+                    create = args.create
                 follow = create
             else:
                 create = args.follow
             Update.create_persistence_file(create, args.drafts, task_list, param)
             if not args.create:
                 print("Default persistence file created: " + create)
+                print("Use --follow if you want to resume")
             else:
                 print("Persistence file created: " + create)
                 print("Use --follow to continue")

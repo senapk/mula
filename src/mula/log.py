@@ -1,14 +1,19 @@
 # to print loading bar
+from .text import Text
 class Log:
 
     def __init__(self, destiny: None | str  = None):
         self.destiny: None | str = destiny
 
-    def print(self, text: str = "", end: str = "\n"):
+    def print(self, text: str | Text, end: str = "\n"):
         if self.destiny is None:
+            if isinstance(text, Text):
+                text = str(text)
             print(text, end=end)
             return
         with open(self.destiny, 'a') as f:
+            if isinstance(text, Text):
+                text = text.get_str()
             f.write(text)
             f.write(end)
 
@@ -28,7 +33,7 @@ class Log:
 
     def done(self, text: str = ""):
         if self.destiny is None:
-            print("] DONE" + text)
+            print(Text().addf("g", "] DONE" + text))
             return
         with open(self.destiny, 'a') as f:
             f.write("] DONE" + text)
@@ -36,7 +41,7 @@ class Log:
 
     def fail(self, text: str = ""):
         if self.destiny is None:
-            print("] FAIL" + text)
+            print(Text().addf("r", "] FAIL" + text))
             return
         with open(self.destiny, 'a') as f:
             f.write("] FAIL" + text)

@@ -83,7 +83,7 @@ class Add:
 
         param = TaskParameters()
         param.duedate = "0" if args.duedate is None else args.duedate
-        param.maxfiles = 3 if args.maxfiles is None else int(args.maxfiles)
+        param.maxfiles = 5 if args.maxfiles is None else int(args.maxfiles)
         param.info = True
         param.exec = True
         if args.visible is not None:
@@ -101,6 +101,8 @@ class Add:
         if args.create is not None or follow is None:
             if follow is None:
                 create: str = "follow.csv"
+                if args.create is not None:
+                    create = args.create
                 follow = create
             else:
                 create = args.follow

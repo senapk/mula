@@ -75,7 +75,7 @@ class Task:
         return self
 
     def serialize(self):
-        return f"status:{self.status}, drafts:{self.drafts}, section:{self.section}, index:{self.id}, label:{self.label}, title:{self.title}"
+        return f"status:{self.status}, drafts:{"" if self.drafts is None else self.drafts}, section:{self.section}, index:{self.id}, label:{self.label}, title:{self.title}"
 
     # "@123 ABCDE..." -> 123
     # "" se não tiver label
@@ -114,6 +114,9 @@ class Task:
             elif key == "title":
                 self.title = value
             elif key == "drafts":
-                self.drafts = value
+                if value == "" or value == "None":
+                    self.drafts = None
+                else:
+                    self.drafts = value
             else:
                 raise Exception("Unknown key in serialized string")

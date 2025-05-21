@@ -3,6 +3,7 @@ from .json_tools import JsonVplLoader, JsonVPL
 from .structure import Structure
 from .credentials import Credentials
 from .task import Task
+from .text import Text
 
 
 class Publish:
@@ -33,17 +34,16 @@ class Publish:
         api.set_keep(qid, keep_size)
  
 
-    def update_extra(self, api: MoodleAPI, vpl: JsonVPL, qid: int):
-
+    def update_exec(self, api: MoodleAPI, vpl: JsonVPL, qid: int):
         if self.task.param.exec:
             self.task.log.send("exec")
             api.set_execution_options(qid)
 
-        if self.task.drafts:
+    def update_drafts(self, api: MoodleAPI, vpl: JsonVPL, qid: int):
+        if self.task.drafts is not None:
             self.task.log.send("drafts")
             vpl.required = vpl.drafts[self.task.drafts]
             api.send_files(vpl, qid)
-
 
     def apply_action(self, vpl: JsonVPL):
         api: MoodleAPI = self.api
@@ -57,7 +57,8 @@ class Publish:
             url = api.urlHandler.update_vpl(task.id)
             task.log.open()
             self.send_basic(api, vpl, url)
-            self.update_extra(api, vpl, task.id)
+            self.update_exec(api, vpl, task.id)
+            self.update_drafts(api, vpl, task.id)
             self.set_keep(api, task.id, len(vpl.keep))
             task.log.done()
         else:  # new
@@ -66,7 +67,8 @@ class Publish:
             url = api.urlHandler.new_vpl(self.section)
             qid = self.send_basic(api, vpl, url)
             task.log.send(str(qid))
-            self.update_extra(api, vpl, qid)
+            self.update_exec(api, vpl, qid)
+            self.update_drafts(api, vpl, qid)
             self.set_keep(api, qid, len(vpl.keep))
             self.structure.add_entry(self.section, qid, vpl.title)
             task.log.done()
@@ -81,23 +83,26 @@ class Publish:
             and not task.drafts
             and (task.param.maxfiles is not None or task.param.visible is not None or task.param.duedate is not None or task.param.exec is not None)
         )
-
+        err: str = ""
         #permite o usuario alterar os dados sem passar um repositorio
         if only_meta and task.id != 0:
             vpl = self.api.download(task.id)
             print(task.param.duedate)
-            err = None
-
-        elif self.credentials.folder_db is not None:
-            vpl, err = loader.load_local(task.label, self.credentials.folder_db)
         else:
-            vpl, err = loader.load_remote(task.label)
-        if err:
+            if task.label == "":
+                task.log.print(Text.format("{r}", "    - Error: label not set"))
+                task.set_status(Task.SKIP)
+                return
+            if self.credentials.folder_db is not None:
+                vpl, err = loader.load_local(task.label, self.credentials.folder_db)
+            else:
+                vpl, err = loader.load_remote(task.label)
+        if err != "":
             task.set_status(Task.FAIL)
-            task.log.print("    - Error:" + err)
+            task.log.print(Text().addf("r", "    - Error: " + err))
             return
         if self.structure is None:
-            task.log.print("    - Error: structure not set")
+            task.log.print(Text.format("{r}", "    - Error: structure not set"))
             task.set_status(Task.FAIL)
             return
         
@@ -107,7 +112,7 @@ class Publish:
             print("    - Searching for label: " + label_to_search)
             itens_label_match: list[Task] = self.structure.search_by_label(label_to_search, self.section)
             if len(itens_label_match) == 0:
-                task.log.print("    - No match found")
+                task.log.print(Text.format("{r}", "    - Error: No match found"))
             for item in itens_label_match:
                 print("    - Found: " + str(item.id) + ": " + item.title)
             item = None if len(itens_label_match) == 0 else itens_label_match[0]    
@@ -116,8 +121,9 @@ class Publish:
             task.log.print("    - Updating: " + str(task.id) + ": " + task.title + ": using label " + task.label)
         try:
             self.apply_action(vpl)
+            task.set_title(vpl.title)
             task.set_status(Task.DONE)
         except Exception as e:
             task.set_status(Task.FAIL)
-            task.log.print("    - Error:" + str(e))
+            task.log.print(Text.format("{r}", "    - Error: " + str(e)))
         return
