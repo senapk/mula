@@ -34,6 +34,7 @@ class Publish:
  
 
     def update_extra(self, api: MoodleAPI, vpl: JsonVPL, qid: int):
+
         if self.task.param.exec:
             self.task.log.send("exec")
             api.set_execution_options(qid)
@@ -42,6 +43,7 @@ class Publish:
             self.task.log.send("drafts")
             vpl.required = vpl.drafts[self.task.drafts]
             api.send_files(vpl, qid)
+
 
     def apply_action(self, vpl: JsonVPL):
         api: MoodleAPI = self.api
@@ -73,7 +75,20 @@ class Publish:
         task: Task = self.task
         task.log.print(f"    - target: {task.section} {task.label}")
         loader: JsonVplLoader = JsonVplLoader(task.log)
-        if self.credentials.folder_db is not None:
+
+        only_meta = (
+            not task.param.info
+            and not task.drafts
+            and (task.param.maxfiles is not None or task.param.visible is not None or task.param.duedate is not None or task.param.exec is not None)
+        )
+
+        #permite o usuario alterar os dados sem passar um repositorio
+        if only_meta and task.id != 0:
+            vpl = self.api.download(task.id)
+            print(task.param.duedate)
+            err = None
+
+        elif self.credentials.folder_db is not None:
             vpl, err = loader.load_local(task.label, self.credentials.folder_db)
         else:
             vpl, err = loader.load_remote(task.label)
@@ -86,7 +101,7 @@ class Publish:
             task.set_status(Task.FAIL)
             return
         
-        # se o id é 0, é operação de ADD, deve veriricar se existe alguém nessa seção com esse label e fazer o update
+        # se o id é 0, é operação de ADD, deve verificar se existe alguém nessa seção com esse label e fazer o update
         if task.id == 0:
             label_to_search = task.label
             print("    - Searching for label: " + label_to_search)

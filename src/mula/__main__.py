@@ -97,10 +97,9 @@ def main():
     group_per_up.add_argument("--create", type=str, metavar="file.csv", help="create a persistence file")
     group_per_up.add_argument("--follow", type=str, metavar="file.csv", help="follow the persistence file")
 
-    group_add_up = parser_update.add_mutually_exclusive_group(required=True)
+    group_add_up = parser_update.add_mutually_exclusive_group(required=False) #Nem todo update precisa de um repositorio
     group_add_up.add_argument("--remote", "-r", type=str, help="[fup | ed | poo]")
     group_add_up.add_argument("--folder", "-f", type=str, help="base folder to search for problems")
-
     parser_update.set_defaults(func=Update.update)
 
     args = parser.parse_args()

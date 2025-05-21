@@ -58,9 +58,11 @@ class Update:
     @staticmethod
     def execute(n_threads: int | None, task_list: list[Task], structure: Structure, follow: str | None):
         lock = threading.Lock()
+        
 
         def worker(task: Task):
             if task.status == Task.DONE or task.status == Task.SKIP:
+                
                 return
             if n_threads == 1:
                 print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title))
@@ -72,12 +74,12 @@ class Update:
                 print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title) + " with log file: " + log_file)
             add = Publish(task).set_structure(structure)
             add.execute()
+
             print("- Finish " + str(task.label))
             if follow is not None:
                 with lock:
                     with open(follow, "w") as f:
                         f.write("\n".join([x.serialize() for x in task_list]) + "\n")
-
         with ThreadPoolExecutor(max_workers=n_threads) as executor:
             executor.map(worker, task_list)
 
@@ -150,6 +152,11 @@ class Update:
                 print("Use --follow to continue")
                 return
         n_threads: int = args.threads if args.threads is not None else 1
+
+         #se vc fornecesse uam label inexistente ele nao falava nada, perdi mt tempo nisso =(
+        if(len(task_list) == 0):
+            raise RuntimeError(f"****No labels found. Please check the arguments****")
+        
         Update.execute(n_threads, task_list, structure, follow)
 
     @staticmethod
@@ -169,6 +176,7 @@ class Update:
         if args_labels:
             for label in args_labels:
                 item_list += [item for item in structure.get_itens() if item.label == label]
+            # print(item_list)
         return item_list
 
     @staticmethod
