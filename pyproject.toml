@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "mula"
-version = "1.4.0"
+version = "1.4.1"
 description = "Add your description here"
 authors = [
     { name = "David", email = "sena.ufc@gmail.com" }

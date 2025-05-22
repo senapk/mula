@@ -1,5 +1,7 @@
 # Changelog
 
+- 1.5
+  - Changing from setuptools to hatchling
 - 1.2.0
   - Permite repositórios personalizados para remote
 - 1.1.0
