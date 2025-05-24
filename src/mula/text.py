@@ -70,8 +70,9 @@ def RToken(fmt: str, text: str) -> Token:
     return Token(text, fmt)
 
 class Text:
-    def __init__(self):
+    def __init__(self, default_fmt: str = ""):
         self.data: list[Token] = []
+        self.default_fmt = default_fmt
 
     @staticmethod
     def format(value: str = "", *args: Any) -> Text:
