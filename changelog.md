@@ -1,5 +1,7 @@
 # Changelog
 
+- 1.6.1
+  - Removing html from mula
 - 1.6
   - Generating html fromm mapi markdown without using pandoc
 - 1.5

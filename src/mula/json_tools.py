@@ -3,7 +3,6 @@ import json
 import os
 import tempfile
 from .credentials import Credentials
-from .html import convert_markdown_to_html
 import requests
 from .log import Log
 
@@ -56,21 +55,7 @@ class JsonVplLoader:
 
     def load_from_string(self, text: str) -> JsonVPL:
         data = json.loads(text)
-        markdown = data.get("description", "")
-        tempdir = tempfile.mkdtemp()
-
-        self.log.print("    - Loading html description in " + tempdir + " ... ")
-        md_file = os.path.join(tempdir, "description.md")
-        html_file = os.path.join(tempdir, "description.html")
-        with open(md_file, "w") as f:
-            f.write(markdown)
-        convert_markdown_to_html(md_file, html_file)
-        html_description = ""
-        with open(html_file, "r") as f:
-            html_description = f.read()
-
-        vpl = JsonVPL(data["title"], html_description)
-        
+        vpl = JsonVPL(data.get("title", ""), data.get("description", ""))
         for f in data.get("upload", []):
             vpl.upload.append(JsonFile(f["name"], f["contents"]))
         for f in data.get("keep", []):
