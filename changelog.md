@@ -1,5 +1,7 @@
 # Changelog
 
+- 1.6
+  - Generating html fromm mapi markdown without using pandoc
 - 1.5
   - Changing from setuptools to hatchling
 - 1.2.0
