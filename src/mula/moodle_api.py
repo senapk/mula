@@ -171,7 +171,7 @@ class MoodleAPI:
         if len(vpl.required) > 0:
             self._send_vpl_files(self.urlHandler.required_files(qid), vpl.required)
 
-        diferenca = self.get_removed_files(self.download(qid),vpl)
+        difference = MoodleAPI.get_removed_files(self.download(qid),vpl)
 
         self.set_keep(qid,0)
 
