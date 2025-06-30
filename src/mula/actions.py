@@ -14,6 +14,7 @@ import threading
 import json
 import argparse
 from typing import Optional
+from .text import Text
 
 import os
 
@@ -61,8 +62,10 @@ class Actions:
         title_pad = max([len(c['title']) for c in courses])
 
         # Exibe os cursos encontrados
+        
+        print(Text.format('{k}', f" {'Course ID'.center(4)}  {'Title'.center(title_pad)}  {'Link'.center(57)}").set_background('W'))
         for course in courses:
-            print(f"Course ID: {course['id'].ljust(4)} - {course['title'].ljust(title_pad)} - Link: {course['link']}")
+            print(f"      {course['id'].rjust(4)} │ {course['title'].ljust(title_pad)} │ {course['link']}")
 
         # Fecha o navegador
         browser.close()
@@ -70,7 +73,7 @@ class Actions:
         credentials = Credentials.load_credentials()
         print("\nCurrent courses alias setted: ")
         for alias, course in credentials.course_alias.items():
-            print(f"  {alias} -> {course}")
+            print(f"  {alias} ➞ {course}")
         if len(credentials.course_alias) == 0:
             print("  No aliases set")
 
