@@ -135,6 +135,7 @@ class Actions:
         log = Log(None)
         i = 0
         while i < len(item_list):
+            api.set_task(item_list[i])
             item = item_list[i]
             path = os.path.normpath(os.path.join(args_output, str(item.id) + ".json"))
             log.print("- Saving id " + str(item.id))
@@ -150,6 +151,7 @@ class Actions:
                 print(type(_e))  # debug
                 print(_e)
                 log.fail(": timeout")
+                i += 1
 
     @staticmethod
     def rm(args: argparse.Namespace):
