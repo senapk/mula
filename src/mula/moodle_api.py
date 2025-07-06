@@ -6,6 +6,7 @@ from typing import Optional, Any, List
 from .log import Log
 import json
 from .task import Task
+from .request_tracer import RequestTracer
 
 class MoodleAPI:
     default_timeout: int = 10
@@ -15,6 +16,8 @@ class MoodleAPI:
         self.credentials = Credentials.load_credentials()
         self.urlHandler = URLHandler()
         self.browser = mechanicalsoup.StatefulBrowser(user_agent='MechanicalSoup')
+        if RequestTracer.is_tracer_on:
+            self.browser.session.hooks['response'].append(RequestTracer.log_formatted)
         self.browser.set_user_agent('Mozilla/5.0')
         self._login()
 
@@ -171,7 +174,7 @@ class MoodleAPI:
         if len(vpl.required) > 0:
             self._send_vpl_files(self.urlHandler.required_files(qid), vpl.required)
 
-        diferenca = self.get_removed_files(self.download(qid),vpl)
+        difference = MoodleAPI.get_removed_files(self.download(qid),vpl)
 
         self.set_keep(qid,0)
 

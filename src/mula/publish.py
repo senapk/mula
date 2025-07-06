@@ -71,6 +71,7 @@ class Publish:
             self.update_drafts(api, vpl, qid)
             self.set_keep(api, qid, len(vpl.keep))
             self.structure.add_entry(self.section, qid, vpl.title)
+            api.send_files(vpl, qid)
             task.log.done()
 
     def execute(self):
