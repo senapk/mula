@@ -45,11 +45,11 @@ def main():
     parser.add_argument('-v', '--version', action="store_true", help="show version")
     subparsers = parser.add_subparsers(title="subcommands", help="help for subcommand")
 
-    parser_courses = subparsers.add_parser('courses', help="Show user courses")
-    parser_courses.set_defaults(func=Actions.courses)
-
     parser_auth = subparsers.add_parser('auth', help="Authenticate user")
     parser_auth.set_defaults(func=Actions.auth)
+
+    parser_courses = subparsers.add_parser('courses', help="Show user courses")
+    parser_courses.set_defaults(func=Actions.courses)
 
     parser_alias = subparsers.add_parser('alias', help="Set alias for a course id")
     parser_alias.add_argument("alias", type=str, help="Alias for the course")
@@ -61,6 +61,18 @@ def main():
     parser_list.add_argument('-u', '--url', action='store_true', help="Show vpl urls")
     parser_list.add_argument("-t", "--topic", action='store_true', help="Show only session topics")
     parser_list.set_defaults(func=Actions.list)
+
+    parser_mv = subparsers.add_parser('mv', parents=[p_selection], help="Move problems in Moodle")
+    parser_mv.add_argument("--course", "-c", type=str, help="Moodle course id or alias")
+    parser_mv.add_argument("target_section", type=int, help="Target section to move the problems")
+    parser_mv.add_argument("--before_id", type=int, help="ID of the item before which to insert the moved item")
+    parser_mv.set_defaults(func=Actions.mv)
+
+    parser_rename = subparsers.add_parser('rename', parents=[p_selection], help="Rename sections in Moodle")
+    parser_rename.add_argument("--course", "-c", type=str, help="Moodle course id")
+    parser_rename.add_argument("new_name", type=str, help="New name for the section")
+    parser_rename.add_argument("section", type=int, help="Section number to rename")
+    parser_rename.set_defaults(func=Actions.rename)
 
     parser_add = subparsers.add_parser('add', parents=[p_section, p_common], help="Add problems to Moodle")
     parser_add.add_argument("--course", "-c", type=str, help="Moodle course id or alias")

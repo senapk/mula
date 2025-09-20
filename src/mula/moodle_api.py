@@ -6,6 +6,7 @@ from typing import Optional, Any, List
 from .log import Log
 import json
 from .task import Task
+from .request_tracer import RequestTracer
 
 class MoodleAPI:
     default_timeout: int = 10
@@ -15,8 +16,11 @@ class MoodleAPI:
         self.credentials = Credentials.load_credentials()
         self.urlHandler = URLHandler()
         self.browser = mechanicalsoup.StatefulBrowser(user_agent='MechanicalSoup')
+        if RequestTracer.is_tracer_on:
+            self.browser.session.hooks['response'].append(RequestTracer.log_formatted)
         self.browser.set_user_agent('Mozilla/5.0')
         self._login()
+        self.sesskey = self.get_sesskey()
 
     def set_task(self, task: Task):
         self.task = task
@@ -65,7 +69,14 @@ class MoodleAPI:
         arqs = soup.findAll('h4', {'id': lambda value: value and value.startswith("fileid")})
         title = soup.find('a', {'href': self.browser.get_url()}).get_text()
         try:
-            descr = soup.find('div', {'class': 'box py-3 generalbox'}).find('div', {'class': 'no-overflow'}).get_text()
+            
+            update_vpl = self.urlHandler.update_vpl(vplid)
+            self.open_url(update_vpl)
+            edit_page = self.browser.page
+            
+            descr_html_with_escape = edit_page.select('#id_introeditor')[0].decode_contents()
+            descr = MoodleAPI.escape_html(descr_html_with_escape)
+            descr = descr.replace('<br />', '<br>')
         except AttributeError:
             descr = ""
 
@@ -78,6 +89,28 @@ class MoodleAPI:
             else:
                 vpl.upload.append(file)
         return vpl
+
+    def escape_html(text: str) -> str:
+        html_entities = {
+            " ": "&nbsp;",  # caractere de espaço não separável (Alt+0160)
+            "<": "&lt;",
+            ">": "&gt;",
+            "&": "&amp;",
+            '"': "&quot;",
+            "'": "&apos;",
+            "¢": "&cent;",
+            "£": "&pound;",
+            "¥": "&yen;",
+            "€": "&euro;",
+            "©": "&copy;",
+            "®": "&reg;",
+            "™": "&trade;",
+        }
+
+        for char, entity in html_entities.items():
+            text = text.replace(entity, char)
+        
+        return text
 
     def set_duedate_field_in_form(self, duedate: Optional[str]):
         if duedate is None:  # unchange default
@@ -171,9 +204,49 @@ class MoodleAPI:
         if len(vpl.required) > 0:
             self._send_vpl_files(self.urlHandler.required_files(qid), vpl.required)
 
-        diferenca = self.get_removed_files(self.download(qid),vpl)
+        difference = MoodleAPI.get_removed_files(self.download(qid),vpl)
 
         self.set_keep(qid,0)
+    
+    def get_sesskey(self) -> str:
+        logout_link = self.browser.page.select_one('a[href*="logout.php"]')["href"]
+        sesskey = logout_link.split("sesskey=")[1]
+        return sesskey
+
+    def move_to_section(self, qid: int, section: int, before_qid: int = None ):
+        url = self.urlHandler.rest_api()
+
+        payload = {
+            'sesskey': self.sesskey,
+            'courseId': self.credentials.get_course(),
+            'class': 'resource',
+            'field': 'move',
+            'id': qid,
+            'sectionId': section,
+        }
+
+        if before_qid is not None:
+            payload['beforeId'] = before_qid
+
+        self.browser.session.post(url, data=payload)
+
+    def rename_section(self, section: int, new_name: str):
+        url = self.urlHandler.service() + "?sesskey=" + self.sesskey + "&info=core_course_edit_section"
+
+        payload = [
+            {
+                "index":0,
+                "methodname":"core_update_inplace_editable",
+                "args":{
+                    "itemid":section,
+                    "component":"format_topics",
+                    "itemtype":"sectionname",
+                    "value":new_name
+                }
+            }
+        ]
+
+        self.browser.session.post(url, json=payload)
 
     def set_execution_options(self, qid: int):
 

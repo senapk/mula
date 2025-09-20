@@ -4,9 +4,10 @@ from .task import Task
 
 # save course structure: sections, ids, titles
 class Structure:
-    def __init__(self, section_item_list: List[List[Task]], section_labels: List[str]):
+    def __init__(self, section_item_list: List[List[Task]], section_labels: List[str], section_ids: List[int]):
         self.section_item_list: List[List[Task]] = section_item_list
         self.section_labels: List[str] = section_labels
+        self.section_ids: List[int] = section_ids
         # redundant info
         self.ids_dict: Dict[int, Task] = self._make_ids_dict()
 

@@ -14,6 +14,7 @@ import threading
 import json
 import argparse
 from typing import Optional
+from .text import Text
 
 import os
 
@@ -61,8 +62,10 @@ class Actions:
         title_pad = max([len(c['title']) for c in courses])
 
         # Exibe os cursos encontrados
+        
+        print(Text.format('{k}', f" {'Course ID'.center(4)}  {'Title'.center(title_pad)}  {'Link'.center(57)}").set_background('W'))
         for course in courses:
-            print(f"Course ID: {course['id'].ljust(4)} - {course['title'].ljust(title_pad)} - Link: {course['link']}")
+            print(f"      {course['id'].rjust(4)} │ {course['title'].ljust(title_pad)} │ {course['link']}")
 
         # Fecha o navegador
         browser.close()
@@ -70,7 +73,7 @@ class Actions:
         credentials = Credentials.load_credentials()
         print("\nCurrent courses alias setted: ")
         for alias, course in credentials.course_alias.items():
-            print(f"  {alias} -> {course}")
+            print(f"  {alias} ➞ {course}")
         if len(credentials.course_alias) == 0:
             print("  No aliases set")
 
@@ -84,7 +87,7 @@ class Actions:
                 os.remove(folder)
             os.mkdir(folder)
             description = data["description"]
-            description_file = os.path.join(folder, "description.txt")
+            description_file = os.path.join(folder, "q.html")
             open(description_file, "w").write(description)
             
             for f in data["upload"]:
@@ -132,6 +135,7 @@ class Actions:
         log = Log(None)
         i = 0
         while i < len(item_list):
+            api.set_task(item_list[i])
             item = item_list[i]
             path = os.path.normpath(os.path.join(args_output, str(item.id) + ".json"))
             log.print("- Saving id " + str(item.id))
@@ -147,6 +151,7 @@ class Actions:
                 print(type(_e))  # debug
                 print(_e)
                 log.fail(": timeout")
+                i += 1
 
     @staticmethod
     def rm(args: argparse.Namespace):
@@ -177,6 +182,38 @@ class Actions:
                 print(type(_e))  # debug
                 print(_e)
                 log.fail(": timeout")
+
+    @staticmethod
+    def mv(args: argparse.Namespace):
+        if args.course is None:
+            print("course index not defined")
+            print("use --course <course id>")
+            return
+        else:
+            credentials = Credentials.load_credentials()
+            credentials.set_course(args.course)
+        
+        api = MoodleAPI()
+        api.move_to_section(args.id, args.target_section, args.before_id)
+    
+    def rename(args: argparse.Namespace):
+        if args.course is None:
+            print("course index not defined")
+            print("use --course <course id>")
+            return
+        else:
+            credentials = Credentials.load_credentials()
+            credentials.set_course(args.course)
+        
+        structure = StructureLoader.load()
+        if structure.section_ids[args.section] is None:
+            print(f"section {args.section} not found")
+            return
+
+        api = MoodleAPI()
+        api.rename_section(structure.section_ids[args.section], args.new_name)
+        print(f"Renamed section {args.section} to {args.new_name}")
+
 
     @staticmethod
     def list(args: argparse.Namespace):

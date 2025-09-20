@@ -16,6 +16,18 @@ class Log:
                 text = text.get_str()
             f.write(text)
             f.write(end)
+    
+    def print_title(self, text: str | Text, end: str = "\n"):
+        if self.destiny is None:
+            if isinstance(text, Text):
+                text = str(text)
+            print(Text.format('{k}', f" {text} ").set_background('W'), end=end)
+            return
+        with open(self.destiny, 'a') as f:
+            if isinstance(text, Text):
+                text = text.get_str()
+            f.write(text)
+            f.write(end)
 
     def open(self):
         if self.destiny is None:

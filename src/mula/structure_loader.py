@@ -33,13 +33,18 @@ class StructureLoader:
             exit(1)
         section_item_list = StructureLoader._make_entries_by_section(soup, topics.contents)
         section_labels: List[str] = StructureLoader._make_section_labels(topics.contents)
+        section_ids: List[int] = StructureLoader._make_section_ids(soup)
         log.done()
-        log.print(soup.title.string)
-        return Structure(section_item_list, section_labels)
+        log.print_title(soup.title.string.replace('Curso: ',''))
+        return Structure(section_item_list, section_labels, section_ids)
 
     @staticmethod
     def _make_section_labels(childrens) -> List[str]:
         return [section['aria-label'] for section in childrens]
+
+    @staticmethod
+    def _make_section_ids(soup) -> List[int]:
+        return [int(section['data-key']) for section in soup.select('#nav-drawer ul:first-of-type li:first-of-type ul:first-of-type li')]
 
     @staticmethod
     def _make_entries_by_section(soup, childrens) -> List[List[Task]]:

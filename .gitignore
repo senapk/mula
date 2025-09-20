@@ -8,6 +8,7 @@ __pycache__/
 *.so
 *~
 .vscode
+sandbox
 
 # due to using tox and pytest
 .tox

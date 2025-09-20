@@ -39,6 +39,18 @@ class Publish:
             self.task.log.send("exec")
             api.set_execution_options(qid)
 
+    def set_drafts(self, vpl: JsonVPL):
+        if self.task.drafts is not None:
+            self.task.log.send("drafts")
+            vpl.required = vpl.drafts[self.task.drafts]
+        elif len(vpl.drafts) > 0:
+            self.task.log.send("drafts from vpl")
+            # Pega a primeira chave disponível dos drafts
+            first_draft_key = list(vpl.drafts.keys())[0]
+            self.task.log.send(f"auto-drafts: {first_draft_key}")
+            vpl.required = vpl.drafts[first_draft_key]
+            self.task.drafts = first_draft_key
+
     def update_drafts(self, api: MoodleAPI, vpl: JsonVPL, qid: int):
         if self.task.drafts is not None:
             self.task.log.send("drafts")
@@ -58,8 +70,9 @@ class Publish:
             task.log.open()
             self.send_basic(api, vpl, url)
             self.update_exec(api, vpl, task.id)
-            self.update_drafts(api, vpl, task.id)
+            self.set_drafts(vpl)
             self.set_keep(api, task.id, len(vpl.keep))
+            api.send_files(vpl, task.id)
             task.log.done()
         else:  # new
             task.log.print("    - Creating: New entry with title: " + vpl.title)
@@ -68,9 +81,10 @@ class Publish:
             qid = self.send_basic(api, vpl, url)
             task.log.send(str(qid))
             self.update_exec(api, vpl, qid)
-            self.update_drafts(api, vpl, qid)
+            self.set_drafts(vpl)
             self.set_keep(api, qid, len(vpl.keep))
             self.structure.add_entry(self.section, qid, vpl.title)
+            api.send_files(vpl, qid)
             task.log.done()
 
     def execute(self):
