@@ -11,6 +11,7 @@
 - [Adicionando](#adicionando)
   - [Utilizando labels](#utilizando-labels)
   - [Atualizando atividades em bloco](#atualizando-atividades-em-bloco)
+- [Integração com repositórios TKO](#integração-com-repositórios-tko)
 - [Removendo](#removendo)
 <!-- toc -->
 
@@ -89,6 +90,41 @@ mula add -c <alias> -f <folder> --follow follow.csv --threads 4
 # --maxfiles para definir o número máximo de arquivos que o aluno pode enviar.
 
 ```
+
+## Integração com repositórios TKO
+
+Para publicar tarefas TKO, use um clone local do repositório de conteúdo. O
+caminho relativo da pasta da tarefa é a chave usada pelo Mula e também é
+gravado no título da atividade Moodle:
+
+```text
+@labs/carro Carro
+```
+
+O Mula procura os artefatos Moodle dentro da pasta da tarefa:
+
+```text
+<repositorio>/<task-path>/.cache/README.html
+<repositorio>/<task-path>/.cache/tests.vpl
+<repositorio>/<task-path>/.cache/starter/<linguagem>/
+```
+
+Se eles não existirem, o Mula executa automaticamente:
+
+```bash
+tko task build <task-path> --moodle <url-do-repositorio>
+```
+
+A URL é derivada do `origin` GitHub do clone e a linguagem enviada como
+rascunho é escolhida com `--drafts`:
+
+```bash
+mula add -c meu_curso -f /repositorios/curso -d py 3:labs/carro
+mula update -c meu_curso -f /repositorios/curso -d py --label labs/carro
+```
+
+O fluxo atual não usa mais `.cache/mapi.json`. O `--folder` deve apontar para a
+raiz do clone; targets absolutos ou caminhos contendo `..` não são aceitos.
 
 ## Create e Follow
 

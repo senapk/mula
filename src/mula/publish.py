@@ -42,7 +42,7 @@ class Publish:
     def update_drafts(self, api: MoodleAPI, vpl: JsonVPL, qid: int):
         if self.task.drafts is not None:
             self.task.log.send("drafts")
-            vpl.required = vpl.drafts[self.task.drafts]
+            vpl.required = vpl.drafts.get(self.task.drafts, [])
             api.send_files(vpl, qid)
 
     def apply_action(self, vpl: JsonVPL):
@@ -94,7 +94,11 @@ class Publish:
                 task.set_status(Task.SKIP)
                 return
             if self.credentials.folder_db is not None:
-                vpl, err = loader.load_local(task.label, self.credentials.folder_db)
+                vpl, err = loader.load_local(
+                    task.label,
+                    self.credentials.folder_db,
+                    task.drafts,
+                )
             else:
                 vpl, err = loader.load_remote(task.label)
         if err != "":

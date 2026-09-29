@@ -1,7 +1,10 @@
+from pathlib import Path
 from typing import List, Optional
 import json
 import os
 import tempfile
+import re
+import subprocess
 from .credentials import Credentials
 import requests
 from .log import Log
@@ -91,12 +94,98 @@ class JsonVplLoader:
             return self.load_from_string(open(path).read()), ""
         return JsonVPL(), "Error downloading " + target
 
-    def load_local(self, target: str, base_folder: str) -> tuple[JsonVPL, str]:
-        path = os.path.join(base_folder, target, ".cache", "mapi.json")
-        self.log.print("    - Loading from local in "    + path + " ... ", end = "")
-        if os.path.exists(path):
-            with open(path, "r") as file:
-                self.log.print("done")
-                return self.load_from_string(file.read()), ""
-        self.log.print("fail")
-        return JsonVPL(), "File not found: " + path
+    @staticmethod
+    def _task_path(target: str) -> Path:
+        normalized: str = target.strip().replace("\\", "/")
+        if normalized.startswith("@"):
+            normalized = normalized[1:]
+        path: Path = Path(normalized)
+        if not normalized or path.is_absolute() or ".." in path.parts:
+            raise ValueError("Task path must be relative to the repository root")
+        return path
+
+    @staticmethod
+    def _title_from_readme(readme: Path) -> str:
+        heading_pattern: re.Pattern[str] = re.compile(r"^#\s+(.+?)\s*$")
+        for line in readme.read_text(encoding="utf-8").splitlines():
+            match: re.Match[str] | None = heading_pattern.match(line)
+            if match is not None:
+                return match.group(1)
+        return readme.parent.name
+
+    @staticmethod
+    def _moodle_title(task_path: Path, title: str) -> str:
+        key: str = task_path.as_posix()
+        prefix: str = f"@{key}"
+        if title == prefix or title.startswith(prefix + " "):
+            return title
+        return f"{prefix} {title}".strip()
+
+    @staticmethod
+    def _draft_files(draft_folder: Path) -> list[JsonFile]:
+        if not draft_folder.is_dir():
+            return []
+        files: list[JsonFile] = []
+        for path in sorted((item for item in draft_folder.rglob("*") if item.is_file()), key=lambda item: item.as_posix()):
+            if path.suffix in {".hide", ".exec"}:
+                continue
+            name: str = path.relative_to(draft_folder).as_posix()
+            files.append(JsonFile(name, path.read_text(encoding="utf-8")))
+        return files
+
+    @staticmethod
+    def _build_artifacts(repo: Path, task_path: Path, check: bool = True) -> None:
+        relative_task: str = task_path.relative_to(repo).as_posix()
+        arguments: list[str] = ["tko", "build", "task", relative_task, "--moodle"]
+        if check:
+            arguments.append("--check")
+        subprocess.run(
+            arguments,
+            cwd=repo,
+            check=True,
+        )
+
+    def load_local(
+        self,
+        target: str,
+        base_folder: str,
+        draft_language: str | None = None,
+    ) -> tuple[JsonVPL, str]:
+        try:
+            relative_task: Path = self._task_path(target)
+            repo: Path = Path(base_folder).resolve()
+            task_folder: Path = (repo / relative_task).resolve()
+            task_folder.relative_to(repo)
+            if not task_folder.is_dir():
+                return JsonVPL(), f"Task folder not found: {task_folder}"
+
+            cache: Path = task_folder / ".cache"
+            html_path: Path = cache / "README.html"
+            cases_path: Path = cache / "tests.vpl"
+            starter_path: Path | None = (
+                cache / "starter" / draft_language if draft_language else None
+            )
+            missing_selected_starter: bool = (
+                starter_path is not None and not starter_path.is_dir()
+            )
+            self.log.print("    - Checking Moodle artifacts ...")
+            self._build_artifacts(
+                repo, task_folder, check=not missing_selected_starter
+            )
+
+            if not html_path.is_file() or not cases_path.is_file():
+                return JsonVPL(), f"Moodle artifacts not found in {cache}"
+
+            title: str = self._moodle_title(
+                relative_task,
+                self._title_from_readme(task_folder / "README.md"),
+            )
+            description: str = html_path.read_text(encoding="utf-8")
+            tests: str = cases_path.read_text(encoding="utf-8")
+            vpl: JsonVPL = JsonVPL(title, description, tests)
+            if draft_language is not None and starter_path is not None:
+                vpl.drafts[draft_language] = self._draft_files(starter_path)
+            self.log.print("    - Loading Moodle artifacts from " + str(cache) + " ... done")
+            return vpl, ""
+        except (OSError, subprocess.CalledProcessError, ValueError) as error:
+            return JsonVPL(), f"Error loading TKO task {target}: {error}"

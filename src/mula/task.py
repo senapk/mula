@@ -81,7 +81,7 @@ class Task:
     # "" se não tiver label
     def set_label_from_title(self):
         title = self.title
-        valid_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
+        valid_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_/."
         ttl_splt = title.strip().split(" ")
         for ttl in ttl_splt:
             if len(ttl) > 0 and ttl[0] == '@':

@@ -2,7 +2,7 @@ import os
 from typing import Optional
 import json
 import getpass
-import appdirs
+import platformdirs
 
 class Credentials:
     instance = None
@@ -81,7 +81,10 @@ class Credentials:
         self.course_alias[alias] = course
 
     def get_settings_file(self) -> str:
-        settings_file = os.path.join(appdirs.user_data_dir(Credentials.package_name), Credentials.credentials_file)
+        settings_file = os.path.join(
+            platformdirs.user_data_dir(Credentials.package_name),
+            Credentials.credentials_file,
+        )
         return settings_file
 
     def save_file(self):
