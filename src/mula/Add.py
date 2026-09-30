@@ -1,147 +1,130 @@
-from mula.credentials import Credentials
-from mula.log import Log
-from mula.publish import Publish
-from mula.structure import Structure
-from mula.structure_loader import StructureLoader
-from mula.task import Task, TaskParameters
+"""Create VPL activities with the shared publishing checkpoint."""
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from .credentials import Credentials
+from .moodle_api import MoodleAPI
+from .operation_state import OperationState
+from .readme_manifest import ReadmeGroup, load_readme_groups
+from .structure_loader import StructureLoader
+from .task import Task
+from .update import UpdateOptions
+from .workflow import PublishWorkflow
 
 
-import argparse
-import os
-import threading
-from concurrent.futures import ThreadPoolExecutor
+@dataclass
+class AddOptions:
+    course: str
+    repo: str
+    targets: list[str] = field(default_factory=list)
+    section: int = 0
+    duedate: str = "0"
+    maxfiles: int = 5
+    visible: int | None = None
+    exec_: bool = True
+    drafts: str | None = None
+    threads: int = 1
+    dry_run: bool = False
+    drop: bool = False
+    from_readme: bool = False
+    _readme_groups: tuple[ReadmeGroup, ...] | None = field(default=None, init=False, repr=False)
+
+    def readme_groups(self) -> tuple[ReadmeGroup, ...]:
+        if self._readme_groups is None:
+            self._readme_groups = load_readme_groups(Path(self.repo), self.section)
+        return self._readme_groups
+
+    def execution_options(self) -> UpdateOptions:
+        return UpdateOptions(
+            course=self.course, repo=self.repo, info=True, exec_=self.exec_,
+            duedate=self.duedate, maxfiles=self.maxfiles, visible=self.visible,
+            drafts=self.drafts, threads=self.threads,
+        )
+
+    def validate(self) -> None:
+        self.execution_options().validate()
+        if not Path(self.repo).is_dir():
+            raise ValueError("--repo must be an existing local repository directory")
+        if type(self.section) is not int or self.section < 0:
+            raise ValueError("--section must be a nonnegative integer")
+        if self.from_readme and self.targets:
+            raise ValueError("--from-readme and manual targets are mutually exclusive")
+        if not self.targets and not self.from_readme:
+            raise ValueError("provide LABEL or SECTION:LABEL targets, or use --from-readme")
+        self.tasks()  # Validate all targets before requesting credentials or writing files.
+
+    def tasks(self) -> list[Task]:
+        selected: dict[tuple[int, str], Task] = {}
+        param = self.execution_options().task_parameters()
+        if self.from_readme:
+            return [Task().set_section(group.section).set_label(label).set_drafts(self.drafts)
+                    .set_param(param).set_status(Task.TODO)
+                    for group in self.readme_groups() for label in group.labels]
+        for target in self.targets:
+            if not isinstance(target, str):
+                raise ValueError("targets must be LABEL or SECTION:LABEL")
+            section = self.section
+            label = target
+            if ":" in target:
+                prefix, label = target.split(":", 1)
+                try:
+                    section = int(prefix)
+                except ValueError as error:
+                    raise ValueError(f"Invalid target {target!r}: use LABEL or SECTION:LABEL") from error
+            label = label.strip().lstrip("@")
+            if (section < 0 or not label or ":" in label
+                    or Path(label).is_absolute() or ".." in Path(label).parts):
+                raise ValueError(f"Invalid target {target!r}: use a relative label and section >= 0")
+            key = (section, label)
+            if key not in selected:
+                selected[key] = (Task().set_section(section).set_label(label)
+                                 .set_drafts(self.drafts).set_param(param).set_status(Task.TODO))
+        return list(selected.values())
 
 
 class Add:
     @staticmethod
-    def validate_args(args: argparse.Namespace):
-        if (args.remote is None and args.folder is None) or (args.remote is not None and args.folder is not None):
-            print("you must set remote database OR local folder")
-            print("use --remote fup | ed | poo")
-            print("or  --folder <local base folder>")
-            return False
-
-        if args.course is None:
-            print("course index not defined")
-            print("use --course <course id>")
-            return False
-
-        if args.follow is not None:
-            if not os.path.exists(args.follow):
-                print("Persistence file not found")
-                return False
-            if len(args.targets) != 0:
-                print("Persistence file and targets are mutually exclusive")
-                return False
-        return True
-
-    @staticmethod
-    def load_tasks_from_follow(follow: str, param: TaskParameters):
-        task_list: list[Task] = []
-        try:
-            lines = open(follow).read().splitlines()
-            for line in lines:
-                task = Task()
-                task.rebuild(line)
-                task.set_param(param)
-                task_list.append(task)
-        except Exception as e:
-            print("Error reading persistence file", follow)
-            print(e)
-        return task_list
-
-    @staticmethod
-    def load_from_args(args: argparse.Namespace, param: TaskParameters):
-        task_list: list[Task] = []
-        for target in args.targets:
-            task = Task()
-            section: int = 0
-            if args.section is not None:
-                section = args.section
-            if ":" in target:
-                section, label = target.split(":")
-                task.set_section(int(section))
-                task.set_label(label)
-            else:
-                task.set_label(target)
-                task.set_section(section)
-            task.set_drafts(args.drafts)
-            task.set_param(param)
-            task.set_status(Task.TODO)
-            task_list.append(task)
-        return task_list
-
-    @staticmethod
-    def add(args: argparse.Namespace):
-        if not Add.validate_args(args):
+    def add(options: AddOptions) -> None:
+        options.validate()
+        tasks = options.tasks()
+        credentials = Credentials.load_credentials()
+        credentials.set_course(options.course)
+        credentials.repo_path = str(Path(options.repo).resolve())
+        structure = StructureLoader.load()
+        if options.from_readme:
+            for group in options.readme_groups():
+                if group.section >= structure.get_number_of_sections():
+                    raise ValueError(
+                        f"README group {group.title!r} requires section {group.section}; "
+                        f"the course has {structure.get_number_of_sections()} sections. "
+                        "Prepare the sections first or adjust --section."
+                    )
+        for task in tasks:
+            if task.section >= structure.get_number_of_sections():
+                raise ValueError(f"Section {task.section} is out of range; check mula list -c {options.course}")
+        if options.drop:
+            PublishWorkflow.drop_existing(tasks, structure)
+        if options.dry_run:
+            print(f"Dry run: {len(tasks)} activity/activities selected for add.")
+            if options.from_readme:
+                groups = options.readme_groups()
+                statuses = {(task.section, task.label): task.status for task in tasks}
+                for group in groups:
+                    print(f"  {group.title} (@{group.marker}) -> Section {group.section}: "
+                          f"{structure.section_labels[group.section]} | {len(group.labels)} tasks")
+                    for label in group.labels:
+                        print(f"    {label} [{statuses[group.section, label]}]")
+                print(f"Total: {len(groups)} active groups, {len(tasks)} tasks.")
+                return
+            for task in tasks:
+                print(f"  Section {task.section}: {structure.section_labels[task.section]} | {task.label} [{task.status}]")
             return
 
-        credentials = Credentials.load_credentials()
-        credentials.set_remote(args.remote)
-        credentials.folder_db = args.folder
-        credentials.set_course(args.course)
-
-        param = TaskParameters()
-        param.duedate = "0" if args.duedate is None else args.duedate
-        param.maxfiles = 5 if args.maxfiles is None else int(args.maxfiles)
-        param.info = True
-        param.exec = True
-        if args.visible is not None:
-            param.visible = True if args.visible == 1 else False
-
-        task_list: list[Task] = []
-        if args.follow is not None:
-            task_list = Add.load_tasks_from_follow(args.follow, param)
-        else:
-            task_list = Add.load_from_args(args, param)
-
-        follow: str | None = args.follow
-        # se mandou criar -> cria e para
-        # ou mandou rodar sem follow -> cria default e continua
-        if args.create is not None or follow is None:
-            if follow is None:
-                create: str = "follow.csv"
-                if args.create is not None:
-                    create = args.create
-                follow = create
-            else:
-                create = args.follow
-
-            open(create, "w").write("\n".join([x.serialize() for x in task_list]))
-            if not args.create:
-                print("Default persistence file created: " + create)
-            else:
-                print("Persistence file created: " + args.create)
-                print("You can use --follow", args.create)
-                return
-
-        n_threads: int = 1 if args.threads is None else args.threads
-        Add.execute(n_threads, task_list, follow)
-
-    @staticmethod
-    def execute(n_threads: int, action_list: list[Task], follow: str | None):
-        structure: Structure = StructureLoader.load(None)
-        lock = threading.Lock()
-        def worker(task: Task):
-            if task.status == Task.DONE or task.status == Task.SKIP:
-                return
-            section = int(task.section)
-            if n_threads == 1:
-                print("- Start " + str(task.label))
-                print("    -", str(task))
-            else:
-                log_file: str = os.path.join(".log", task.label)
-                if not os.path.exists(".log"):
-                    os.mkdir(".log")
-                task.set_log(Log(log_file))
-                print("- Start " + str(task.label) + " with log file: " + log_file)
-            add = Publish(task).set_section(section).set_structure(structure)
-            add.execute()
-            print("- Finish " + str(task.label))
-            if follow is not None:
-                with lock:
-                    with open(follow, "w") as f:
-                        f.write("\n".join([x.serialize() for x in action_list]) + "\n")
-
-        with ThreadPoolExecutor(max_workers=n_threads) as executor:
-            executor.map(worker, action_list)
+        execution = options.execution_options()
+        execution.course = credentials.get_course()
+        execution.repo = credentials.repo_path
+        state = OperationState(execution, credentials.url, MoodleAPI.default_timeout, tasks, "add", drop=options.drop)
+        state.save()
+        state.open_in_vscode()
+        PublishWorkflow.execute(state, structure)

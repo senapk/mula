@@ -66,6 +66,7 @@ class Publish:
             task.log.open()
             url = api.urlHandler.new_vpl(self.section)
             qid = self.send_basic(api, vpl, url)
+            task.set_id(qid)  # Preserve the created ID if a subsequent upload fails.
             task.log.send(str(qid))
             self.update_exec(api, vpl, qid)
             self.update_drafts(api, vpl, qid)
@@ -93,14 +94,26 @@ class Publish:
                 task.log.print(Text.format("{r}", "    - Error: label not set"))
                 task.set_status(Task.SKIP)
                 return
-            if self.credentials.folder_db is not None:
+            if self.credentials.repo_path is not None:
                 vpl, err = loader.load_local(
                     task.label,
-                    self.credentials.folder_db,
+                    self.credentials.repo_path,
                     task.drafts,
                 )
+                if task.id != 0 and err.startswith("Task folder not found:"):
+                    key = task.label.strip().lstrip("@")
+                    fallback_target = f"labs/{key}"
+                    if key and not key.startswith("labs/"):
+                        task.log.print(
+                            f"    - Task not found at {task.label}; trying {fallback_target} ..."
+                        )
+                        vpl, err = loader.load_local(
+                            fallback_target,
+                            self.credentials.repo_path,
+                            task.drafts,
+                        )
             else:
-                vpl, err = loader.load_remote(task.label)
+                vpl, err = JsonVPL(), "Local repository not set; use --repo <path>"
         if err != "":
             task.set_status(Task.FAIL)
             task.log.print(Text().addf("r", "    - Error: " + err))

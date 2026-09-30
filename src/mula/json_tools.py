@@ -2,11 +2,8 @@ from pathlib import Path
 from typing import List, Optional
 import json
 import os
-import tempfile
 import re
 import subprocess
-from .credentials import Credentials
-import requests
 from .log import Log
 
 
@@ -69,30 +66,6 @@ class JsonVplLoader:
             for file in v:
                 vpl.drafts.setdefault(k, []).append(JsonFile(file["name"], file["contents"]))
         return vpl
-
-    def save_as(self, file_url: str, filename: str) -> bool:
-        headers = {'User-Agent': 'Mozilla/5.0'}  # Evita bloqueios comuns
-        try:
-            r = requests.get(file_url, headers=headers, timeout=10)
-            r.raise_for_status()  # Levanta erro para códigos HTTP como 404, 403 etc.
-            with open(filename, 'wb') as f:
-                f.write(r.content)
-            return True
-        except requests.RequestException as _:
-            return False
-
-    # remote is like https://raw.githubusercontent.com/qxcodefup/moodle/master/base/
-    def load_remote(self, target: str) -> tuple[JsonVPL, str]:
-        remote_url: str | None = Credentials.load_credentials().get_remote()
-        if remote_url is None:
-            return JsonVPL(), "Remote URL not set"
-        url: str = remote_url + "/" + target + "/.cache/mapi.json"
-        self.log.print("    - " + url)
-        _, path = tempfile.mkstemp(suffix = "_" + target + '.json')
-        self.log.print("    - Loading in " + path + " ... ")
-        if self.save_as(url, path):
-            return self.load_from_string(open(path).read()), ""
-        return JsonVPL(), "Error downloading " + target
 
     @staticmethod
     def _task_path(target: str) -> Path:
@@ -166,7 +139,10 @@ class JsonVplLoader:
                 cache / "starter" / draft_language if draft_language else None
             )
             missing_selected_starter: bool = (
-                starter_path is not None and not starter_path.is_dir()
+                html_path.is_file()
+                and cases_path.is_file()
+                and starter_path is not None
+                and not starter_path.is_dir()
             )
             self.log.print("    - Checking Moodle artifacts ...")
             self._build_artifacts(

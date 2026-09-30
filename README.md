@@ -54,42 +54,43 @@ mula courses
 mula alias <nome_do_alias> <id_do_curso>
 
 # listar um curso
-mula list <nome_do_alias ou id_do_curso>
+mula list -c <alias ou id_do_curso>
 
-# adicionar questões usando repositório remoto fup | ed | poo
-mula add -c <alias> -r <repositorio> sessao:label sessao:label ...
+# adicionar questões usando um repositório local
+mula add -c <alias> -r <repo> sessao:label sessao:label ...
 # exemplo
-# mula add -c meu_fup -r fup 3:monica 5:opala 7:baruel
+# mula add -c meu_curso -r ./repositorio 3:monica 5:opala 7:baruel
 
-# adicionar questões usando repositório local
-mula add -c <alias> -f <folder> sessao:label sessao:label ...
-# exemplo
-# mula add -c meu_fup -f arcade/base 3:monica 5:opala 7:baruel
+# add e update salvam parâmetros e andamento no cache do Mula; para retomar:
+mula resume
 
-# uma ação de add ou update gera automaticamente um arquivo follow.csv onde você pode
-# acompanhar o andamento da publicação das questões, se tiver que retomar o processo
-# você pode usar o comando mula --follow <arquivo> para continuar o processo
-mula add -c <alias> -f <folder> --follow follow.csv
-
-# também pode passar --threads para usar múltiplas threads
-mula add -c <alias> -f <folder> --follow follow.csv --threads 4
+# também pode passar --threads na execução inicial
+mula add -c <alias> -r <repo> --threads 4 3:labs/carro
 
 # o update seguie o mesmo modelo do add, mas ao invés de adicionar questões
 # você precisa informar o que quer atualizar
-# --ids <ids> para atualizar questões específicas
-# --sections <ids> para atualizar todas as questões de uma seção
+# --id <ids> para atualizar questões específicas
+# --section <índices> para atualizar seções
 # --all para atualizar todas as questões do curso
 # --label <labels> para atualizar questões específicas
+# --dry-run mostra as atividades selecionadas, sem alterá-las
+# exemplo: mula update -c meu_curso --all --dry-run
 
 # E também pode escolher o que quer atualizar
 # --info para atualizar as informações da questão
-# --drafts para enviar os arquivos de rascunho
+# --lang para enviar os arquivos de rascunho
 # --duedate para atualizar a data de fechamento
 # --exec para habilitar as opções de execução (run, avaliate, debug)
 # --visible para mostrar ou esconder a questões.
 # --maxfiles para definir o número máximo de arquivos que o aluno pode enviar.
 
 ```
+
+Para conferir a sintaxe completa de qualquer comando, use `mula <comando> --help`.
+Seleções de `update`, `rm` e `down` usam exatamente uma opção entre `--all`,
+`--id`, `--label` e `--section`. Para retomar o último `add` ou `update`, use `mula resume`
+sem argumentos. Índices de seção começam em zero, como exibidos
+por `mula list -c <curso>`.
 
 ## Integração com repositórios TKO
 
@@ -116,107 +117,199 @@ tko task build <task-path> --moodle <url-do-repositorio>
 ```
 
 A URL é derivada do `origin` GitHub do clone e a linguagem enviada como
-rascunho é escolhida com `--drafts`:
+rascunho é escolhida com `--lang`:
 
 ```bash
-mula add -c meu_curso -f /repositorios/curso -d py 3:labs/carro
-mula update -c meu_curso -f /repositorios/curso -d py --label labs/carro
+mula add -c meu_curso -r /repositorios/curso -l py 3:labs/carro
+mula update -c meu_curso -r /repositorios/curso --info -l py --label labs/carro
 ```
 
-O fluxo atual não usa mais `.cache/mapi.json`. O `--folder` deve apontar para a
+O fluxo atual não usa mais `.cache/mapi.json`. O `--repo` deve apontar para a
 raiz do clone; targets absolutos ou caminhos contendo `..` não são aceitos.
 
-## Create e Follow
+## Acompanhamento e retomada
 
-Nos comandos de adicionar e atualizar questões, você pode usar a opção `--follow` para criar um arquivo CSV com o andamento do processo. Você pode usar esse arquivo para continuar o processo de adição ou atualização de questões.
+Os comandos `add` e `update` salvam automaticamente o contexto e o andamento
+da última execução em `operation.json`, dentro de `platformdirs.user_cache_path("mula")` — normalmente
+`~/.cache/mula/operation.json` no Linux. O JSON é aberto no VS Code para acompanhar
+o progresso, e a execução começa imediatamente. Se o VS Code não puder ser
+aberto, o Mula avisa e continua.
 
-Esse arquivo é criado automaticamente quando você usa o comando `add` ou `update`. Caso queira apenas criar o arquivo, você pode usar o comando `--create` para criar o arquivo CSV sem adicionar ou atualizar imediatamente as questões.
-
-Analizando o arquivo criado, você pode decidir quais ações devem ser feitas (TODO), quais quer pular(SKIP), quais deram erro(FAIL) e quais foram concluídas(DONE).
-
-Olhando o arquivo durante a execução, é possível ver o andamento das threads em tempo real.
-
-Também é possível definir manualmente qual a label cadas arquivo vai utilizar no update para atualizar a questão, caso a questão antiga esteja num modelo sem a label ou a label tenha sido alterada.
+Para retomar, basta executar:
 
 ```bash
-
-### Utilizando labels
-
-O procedimento padrão para inserção é utilizando as questões do repositório remoto configurado no arquivo de configurações. Para FUP, o repositório padrão está no [github](https://github.com/qxcodefup/arcade#qxcodefup).
-
-Para enviar as questão `A idade de Dona @monica` e `@opala bebedor` para a seção 5 do seu curso do moodle use:
-
-``` bash
-meucurso add -s 5 monica opala
-
-# ou utilizando o modo compacto
-
-meucurso add 5:monica 5:opala
+mula resume
 ```
 
-Ou enviar questões para diferentes seções utilizando o modo compacto
+Esse comando recupera o Moodle, o ID do curso, o caminho absoluto do repositório,
+as alterações, a linguagem, as threads e o timeout salvos. As credenciais são
+obtidas da configuração atual e não são armazenadas no JSON. Não são aceitos
+argumentos ou substituições de parâmetros, inclusive `--timeout` global.
 
-``` bash
-meucurso add 5:002 6:003 
+Tarefas `TODO` e `FAIL` são retomadas; tarefas `DONE` e `SKIP` são preservadas.
+Se não houver pendências, o comando informa isso e encerra. Um novo `add` ou `update`
+com atividades selecionadas substitui o acompanhamento anterior, mesmo que seja
+de outro comando ou curso. `--dry-run`, seleção vazia e erros de parâmetros não substituem
+o arquivo. Use um processo de `add`, `update` ou `resume` por vez. O arquivo aberto
+serve para acompanhar o progresso; não o edite enquanto a execução estiver ativa.
+
+`add` e `update` não aceitam mais `--create` nem `--follow`, e não importam
+arquivos antigos `follow.csv`. Se ainda existir apenas o JSON anterior
+`update.json`, `mula resume` consegue lê-lo e passa a gravar em `operation.json`.
+
+### Adicionando atividades
+
+O `add` recebe o curso com `-c`, o caminho do repositório local com `-r` e os targets como
+`LABEL` ou `SEÇÃO:LABEL`. Por exemplo:
+
+```bash
+mula add -c meu_curso -r ./repositorio 5:labs/carro
 ```
 
-O comando `add` tem várias opções de personalização.
+O curso (`--course` / `-c`) e o repositório (`--repo` / `-r`) são obrigatórios.
+Escolha targets ou `--from-readme`, que são mutuamente exclusivos.
+`--section N` / `-S N` define a seção padrão (inicialmente `0`);
+um prefixo `N:` no target substitui esse padrão. Targets repetidos na mesma
+seção são tratados uma única vez. Se a label já existir nessa seção, a atividade
+é atualizada.
 
-``` bash
-  -s SECTION, --section SECTION
-  -d DUEDATE, --duedate DUEDATE
-                        duedate 0 to disable or duedate yyyy:m:d:h:m
-  -m MAXFILES, --maxfiles MAXFILES
-                        max student files
-  -v VISIBLE, --visible VISIBLE
-                        make entry visible 1 or 0
+O título e a descrição vêm do repositório. Por padrão, o prazo fica desabilitado
+(`--duedate 0`), o máximo de arquivos é `5`, e Run, Evaluate e Debug são habilitados.
+Use `--no-exec` para manter as opções de execução sem alterações.
+`--lang LANG` / `-l LANG` envia os arquivos iniciais da linguagem.
+`--visible 0` esconde a atividade; `--visible 1` mostra. Sem essa opção, o Mula
+mantém o valor definido pelo Moodle.
+
+```bash
+# publicar duas tarefas usando a mesma seção
+mula add -c meu_curso -r ./repositorio -S 3 -l py labs/carro labs/bicicleta
+
+# conferir os targets sem publicar nem substituir o acompanhamento
+mula add -c meu_curso -r ./repositorio --dry-run 3:labs/carro 5:labs/bicicleta
+
+# retomar as tarefas pendentes da última execução de add ou update
+mula resume
 ```
+
+### Importando a organização de um repositório
+
+`--from-readme` lê os grupos `## Título <!-- @marcador -->` do `README.md`
+na raiz do repositório. Cada grupo ativo ocupa uma seção consecutiva, começando
+em `--section` (padrão `0`). Grupos com `active=0` são ignorados; grupos ativos
+vazios também ocupam uma seção. As seções precisam existir no Moodle: o comando
+não cria nem renomeia seções.
+
+Links locais em listas, como `labs/carro/README.md`, viram a label `labs/carro`.
+Tarefas marcadas com `[x]` e `[ ]` são incluídas. Repetições dentro do mesmo grupo
+são eliminadas, e todos os arquivos e destinos são validados antes da publicação.
+
+```bash
+# conferir grupos, seções reais do curso, labels e totais
+mula add -c meu_curso -r ~/dropbox/gits/fup/arcade --from-readme -S 1 -l py --dry-run
+
+# publicar a distribuição conferida
+mula add -c meu_curso -r ~/dropbox/gits/fup/arcade --from-readme -S 1 -l py
+```
+
+O Arcade possui 10 grupos ativos com 222 tarefas nessa organização. Use `-s 1`
+para reservar a seção geral (`0`). O padrão de uma thread preserva a ordem de
+publicação; com várias threads essa ordem não é garantida. `mula resume` usa as
+labels e seções salvas em `operation.json`, sem reler o índice do repositório.
 
 ### Atualizando atividades em bloco
 
-Você pode atualizar todas as questões de uma seção com o comando `update`.
+O comando segue o formato:
 
-``` bash
-meucurso update <quais problemas> <o que queres atualizar>
+```bash
+mula update -c CURSO SELEÇÃO ALTERAÇÕES [OPÇÕES]
 ```
 
-Quais problemas pode ser
+Escolha exatamente uma seleção:
 
-- `--all` ou `-a` para todas as questões do curso
-- `--sections 4` ou `-s 4` para todas as questões da seção 4
-- `--labels monica opala` ou `-l monica opala` para as questão de label monica e opala
+| Opção | Atividades selecionadas |
+| --- | --- |
+| `--all` / `-A` | Todos os VPLs do curso |
+| `--id ID` / `-I ID` | IDs específicos; repita a opção para vários IDs |
+| `--label LABEL` / `-L LABEL` | Labels exatas; repita a opção para várias labels |
+| `--section ÍNDICE` / `-S ÍNDICE` | VPLs da seção; índices começam em zero |
 
-Opções podem ser
+A forma recomendada para vários valores é repetir a opção, por exemplo
+`--id 123 --id 456` ou `--section 0 --section 2`. A sintaxe anterior
+`--id 123 456` e `--section 0 2` também é aceita.
 
-- `--info` para atualizar o conteúdo das questões pelo conteúdo do repositório remoto
-- `--duedate 2021:5:28:11:30` para definir o horário de fechamento da atividade, ou `0` para desabilitar
-- `--exec` para habilitar as opções de execução (run, avaliate, debug)
-- `--visible <0 | 1>` para mostrar ou esconder a questões.
-- `--maxfiles 3` para definir o número máximo de arquivos que o aluno pode enviar.
+Informe uma ou mais alterações (elas podem ser combinadas):
 
-Exemplos:
+| Opção | Efeito / dependência |
+| --- | --- |
+| `--info` | Atualiza título e descrição; exige `--repo DIR` |
+| `--lang LANG` / `-l LANG` | Envia os arquivos iniciais da linguagem, como `py`; exige `--info` |
+| `--duedate YYYY:MM:DD:HH:MM` | Define uma data válida de fechamento; `0` desabilita o prazo |
+| `--visible 0\|1` | Esconde (`0`) ou mostra (`1`) as atividades |
+| `--maxfiles N` | Define o máximo de arquivos, respeitando a quantidade de arquivos preservados |
+| `--exec` | Habilita Run, Evaluate e Debug |
 
-``` bash
-# esconder todas as questões da sessão 3
-meucurso update -s 3 --visible 0
+O repositório é informado com `--repo DIR` / `-r DIR`. Se a pasta correspondente
+à label não existir, o Mula também tenta `labs/key`.
 
-# atualizar o conteúdo de todas as questões do curso usando o repositório remoto e também mudar o máximo de arquivos para 5
-meucurso update --all --info --maxfiles 5 --remote [fup | ed | poo]
-#vode tambem pode utilizar um repositorio local ai seria --folder ./local do arquivo
+Use `--dry-run` para conferir as atividades pendentes sem alterar o Moodle nem
+gravar arquivos. Nesse modo, alterações e `--repo` são opcionais.
+Uma execução nova grava o andamento e os parâmetros em `operation.json` no cache
+do Mula. Use `mula resume` para retomar as pendências com os mesmos parâmetros.
+`--threads N` / `-t N` define os trabalhadores simultâneos (padrão: `1`).
+O timeout é uma opção global e aparece antes do subcomando:
+`mula --timeout 30 update -c meu_curso --all --visible 0 --threads 4`.
+As opções globais `-t` e `--timeout` definem o timeout; depois de `update`,
+`-t` significa `--threads`.
 
-# mudar a data de fechamento das questões da seção 4
-meucurso update -s 4 --duedate 2021:5:28:11:30
+```bash
+# conferir todas as atividades selecionadas
+mula update -c meu_curso --all --dry-run
+
+# esconder atividades de duas seções
+mula update -c meu_curso --section 0 --section 3 --visible 0
+
+# atualizar conteúdo e arquivos iniciais, mudando o limite de arquivos
+mula update -c meu_curso --all --info -r ./repositorio --lang py --maxfiles 5
+
+# mudar o prazo de atividades específicas
+mula update -c meu_curso --id 123 --id 456 --duedate 2026:10:15:23:59
+
+# retomar as atividades pendentes da última operação, sem repetir os parâmetros
+mula resume
 ```
 
 ## Removendo
 
 ``` bash
-# para remover todos os vpls da seção 4
-$ meucurso rm -s 4
+# para remover todos os VPLs da seção 4
+mula rm -c meu_curso --section 4
 
 # para remover as questões passando os IDS
-$ meucurso rm -i 19234 18234 19234
+mula rm -c meu_curso --id 19234 18234
 
 # para remover TODOS os vpls do curso
-$ meucurso rm --all
+mula rm -c meu_curso --all
+```
+
+## Gerenciando seções do curso
+
+O subcomando `section` permite adicionar uma seção ao final do curso, renomear
+uma seção existente ou removê-la. Os índices são os mesmos exibidos por
+`mula list` e começam em zero.
+
+```bash
+mula section add -c meu_curso --name "Labs"
+mula section rename -c meu_curso --index 2 --name "Laboratórios"
+mula section remove -c meu_curso --index 2
+```
+
+A remoção pede confirmação e apaga também as atividades dentro da seção. Use
+`--yes` para confirmar sem prompt.
+
+No `mula add`, use `--drop` para ignorar chaves que já existem na seção de destino,
+em vez de atualizá-las. As tarefas ignoradas aparecem como `SKIP` no acompanhamento;
+a opção também é preservada por `mula resume`. Use `--dry-run` para conferir.
+
+```sh
+mula add -c meu_curso -r ./repositorio -S 1 --drop labs/carro labs/bicicleta
 ```

@@ -37,9 +37,28 @@ garantir sua geração.
 Exemplo:
 
 ```bash
-mula add -c meu_curso -f /repositorios/curso -d py 3:labs/carro
-mula update -c meu_curso -f /repositorios/curso -d py --label labs/carro
+mula add -c meu_curso -r /repositorios/curso -l py 3:labs/carro
+mula update -c meu_curso -r /repositorios/curso --info -l py --label labs/carro
 ```
 
 O título enviado ao Moodle recebe a chave `@labs/carro`, permitindo localizar a
 mesma atividade em atualizações posteriores.
+
+## Importar grupos do README
+
+Use `mula add -c meu_curso -r /repositorios/curso --from-readme -S 1 -l py --dry-run`
+para conferir a distribuição. Remova `--dry-run` para publicar.
+Os grupos `## Título <!-- @marcador -->` ocupam seções consecutivas já existentes,
+começando em `-S` (padrão `0`). `active=0` ignora o grupo; um grupo ativo vazio
+ocupa uma seção. Links locais para tarefas em listas são incluídos tanto com
+`[x]` quanto com `[ ]`. Não combine `--from-readme` com targets posicionais.
+Uma thread preserva a ordem; várias threads podem alterar a ordem de criação.
+A retomada usa a distribuição salva, sem reler o README.
+
+## Retomar um add ou update
+
+Os comandos `add` e `update` salvam seus parâmetros e o andamento em `operation.json` no cache do Mula
+(obtido via `platformdirs`) e abre o arquivo no VS Code para acompanhamento.
+Para retomar as tarefas pendentes da última execução, use `mula resume`, sem
+argumentos. Um novo `add` ou `update` substitui o acompanhamento anterior; `--dry-run`
+não grava arquivos. As opções `--create` e `--follow` foram removidas dos dois comandos.

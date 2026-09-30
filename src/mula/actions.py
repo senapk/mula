@@ -12,7 +12,7 @@ from .structure import Structure
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import json
-import argparse
+from types import SimpleNamespace
 from typing import Optional
 
 import os
@@ -20,7 +20,7 @@ import os
 class Actions:
 
     @staticmethod
-    def auth(_: argparse.Namespace):
+    def auth(_: SimpleNamespace):
         credentials = Credentials.load_credentials()
         credentials.username = None
         credentials.password = None
@@ -28,14 +28,14 @@ class Actions:
         credentials.save_file()
 
     @staticmethod
-    def alias(args: argparse.Namespace):
+    def alias(args: SimpleNamespace):
         credentials = Credentials.load_credentials()
         credentials.set_alias(args.course, args.alias)
         credentials.save_file()
 
 
     @staticmethod
-    def courses(_: argparse.Namespace):
+    def courses(_: SimpleNamespace):
         moodle = MoodleAPI()
         urls = URLHandler()
         moodle.open_url(urls.base())
@@ -58,7 +58,11 @@ class Actions:
                 'link': link
             })
 
-        title_pad = max([len(c['title']) for c in courses])
+        if not courses:
+            print("No courses were found for this account.")
+            browser.close()
+            return
+        title_pad = max(len(c['title']) for c in courses)
 
         # Exibe os cursos encontrados
         for course in courses:
@@ -115,10 +119,9 @@ class Actions:
             return
 
     @staticmethod
-    def down(args: argparse.Namespace):
-        if args.course is None:
-            print("course index not defined")
-            print("use --course <course id>")
+    def down(args: SimpleNamespace):
+        if not Actions._has_selection(args):
+            print("Choose activities with --all, --id, --label or --section.")
             return
         else:
             credentials = Credentials.load_credentials()
@@ -149,10 +152,9 @@ class Actions:
                 log.fail(": timeout")
 
     @staticmethod
-    def rm(args: argparse.Namespace):
-        if args.course is None:
-            print("course index not defined")
-            print("use --course <course id>")
+    def rm(args: SimpleNamespace):
+        if not Actions._has_selection(args):
+            print("Choose activities with --all, --id, --label or --section.")
             return
         else:
             credentials = Credentials.load_credentials()
@@ -179,7 +181,7 @@ class Actions:
                 log.fail(": timeout")
 
     @staticmethod
-    def list(args: argparse.Namespace):
+    def list(args: SimpleNamespace):
         if args.course is None:
             print("course index not defined")
             print("use --course <course id>")
@@ -193,6 +195,13 @@ class Actions:
         args_topic_only: bool = args.topic
         viewer = Viewer(args_url, args_topic_only)
         if args_section is not None:
-            viewer.list_section(args_section)
+            try:
+                viewer.list_section(args_section)
+            except ValueError as error:
+                print(error)
         else:
             viewer.list_all()
+
+    @staticmethod
+    def _has_selection(args: SimpleNamespace) -> bool:
+        return bool(args.all or args.section or args.id or args.label)

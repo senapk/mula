@@ -10,9 +10,6 @@ class Credentials:
     package_name = "mula"
     credentials_file = "credentials.json"
 
-    database_init = "https://raw.githubusercontent.com/"
-    database_end = "base"
-    database_url = ["https://raw.githubusercontent.com/qxcode", "/arcade/master/base"]
     moodle_url = "https://moodle2.quixada.ufc.br"
 
     def __init__(self):
@@ -20,9 +17,7 @@ class Credentials:
         self.username: str | None = None
         self.password: str | None = None
         self.__course_id: Optional[str] = None # moodle course id
-        self.remote_alias: str | None = None # fup | ed | poo
-        self.folder_db: str | None = None
-        self.__remote_db: str | None = None
+        self.repo_path: str | None = None
         self.course_alias: dict[str, int] = {} # course alias
 
     def fill_empty(self) -> bool:
@@ -67,8 +62,10 @@ class Credentials:
             if "course_alias" in config:
                 self.course_alias = config["course_alias"]
             return self
-        except (FileNotFoundError, json.JSONDecodeError) as _:
-            print("Error loading credentials file.")
+        except FileNotFoundError:
+            pass
+        except json.JSONDecodeError as error:
+            raise ValueError(f"Invalid credentials file: {settings_file}") from error
         return self
 
     def set_alias(self, course: int, alias: str):
@@ -118,28 +115,6 @@ class Credentials:
     #     if "course_alias" in config:
     #         self.course_alias = config["course_alias"]
 
-    def set_remote(self, remote: str | None):
-        if remote is None:
-            return
-        if remote == "fup" or remote == "poo" or remote == "ed":
-            self.remote_alias = remote
-            self.__remote_db = Credentials.database_url[0] + remote + Credentials.database_url[1]
-        elif remote.startswith(Credentials.database_init) and remote.endswith(Credentials.database_end):
-            self.remote_alias = "user"
-            self.__remote_db = remote
-        else:
-            print("Remote database not found")
-            print("Personal remote databases must start with " + Credentials.database_init + " and end with " + Credentials.database_end)
-            exit(1)
-
-    def get_remote(self) -> str | None:
-        if self.__remote_db is None:
-            print("Remote database not set")
-            print("Use --remote <fup | ed | poo>")
-            print("or --remote <url>")
-            raise ValueError("Remote database not set")
-        return self.__remote_db
-
     @staticmethod
     def load_credentials():
         if Credentials.instance is not None:
@@ -148,4 +123,4 @@ class Credentials:
         return Credentials.instance
 
     def __str__(self) -> str:
-        return "{}:{}:{}:{}".format(self.username, self.password, self.url, self.folder_db)
+        return "{}:{}:{}:{}".format(self.username, self.password, self.url, self.repo_path)

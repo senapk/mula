@@ -6,6 +6,11 @@ from typing import Optional, Any, List
 from .log import Log
 import json
 from .task import Task
+from pathlib import Path
+import certifi
+import hashlib
+import os
+from platformdirs import user_cache_dir
 
 class MoodleAPI:
     default_timeout: int = 10
@@ -16,7 +21,23 @@ class MoodleAPI:
         self.urlHandler = URLHandler()
         self.browser = mechanicalsoup.StatefulBrowser(user_agent='MechanicalSoup')
         self.browser.set_user_agent('Mozilla/5.0')
+        if not (os.environ.get('REQUESTS_CA_BUNDLE') or os.environ.get('CURL_CA_BUNDLE')):
+            self.browser.session.verify = self._certificate_bundle()
         self._login()
+
+    @staticmethod
+    def _certificate_bundle() -> str:
+        """Add Moodle's correct issuer because its server sends a wrong chain."""
+        base_bundle = Path(certifi.where()).read_bytes()
+        issuer = Path(__file__).parent / 'certs' / 'globalsign-rsa-ov-ssl-ca-2018.pem'
+        bundle = base_bundle + b'\n' + issuer.read_bytes()
+        digest = hashlib.sha256(bundle).hexdigest()[:16]
+        cache_dir = Path(user_cache_dir('mula'))
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        bundle_path = cache_dir / f'ca-bundle-{digest}.pem'
+        if not bundle_path.exists():
+            bundle_path.write_bytes(bundle)
+        return str(bundle_path)
 
     def set_task(self, task: Task):
         self.task = task

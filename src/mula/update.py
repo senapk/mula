@@ -1,181 +1,147 @@
-from .publish import Publish
-from .structure import Structure
-from .moodle_api import MoodleAPI
-from .log import Log
-from .task import Task, TaskParameters
+"""Update workflow and its typed input contract."""
+
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+
 from .credentials import Credentials
+from .moodle_api import MoodleAPI
+from .operation_state import OperationState
+from .workflow import PublishWorkflow
+from .structure import Structure
 from .structure_loader import StructureLoader
-import os
-import threading
-from concurrent.futures import ThreadPoolExecutor
-import argparse
-from .text import Text
+from .task import Task, TaskParameters
+
+
+@dataclass
+class UpdateOptions:
+    """Parameters passed from the CLI to the update workflow."""
+
+    course: str
+    all_: bool = False
+    ids: list[int] | None = None
+    labels: list[str] | None = None
+    sections: list[int] | None = None
+    repo: str | None = None
+    dry_run: bool = False
+    info: bool = False
+    drafts: str | None = None
+    duedate: str | None = None
+    maxfiles: int | None = None
+    visible: int | None = None
+    exec_: bool = False
+    threads: int = 1
+
+    def has_action(self) -> bool:
+        return any((
+            self.info, self.exec_, self.drafts is not None,
+            self.duedate is not None, self.maxfiles is not None,
+            self.visible is not None,
+        ))
+
+    def validate(self) -> None:
+        if not isinstance(self.course, str) or not self.course.strip():
+            raise ValueError("invalid course")
+        if type(self.info) is not bool or type(self.exec_) is not bool:
+            raise ValueError("invalid action flags")
+        if type(self.threads) is not int or self.threads < 1:
+            raise ValueError("--threads must be a positive integer")
+        if self.visible is not None and (type(self.visible) is not int or self.visible not in (0, 1)):
+            raise ValueError("--visible must be 0 or 1")
+        if self.maxfiles is not None and (type(self.maxfiles) is not int or self.maxfiles < 0):
+            raise ValueError("--maxfiles must be a nonnegative integer")
+        for name in ("repo", "drafts", "duedate"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"invalid --{name}")
+        if self.duedate is not None and self.duedate != "0":
+            try:
+                year, month, day, hour, minute = (int(part) for part in self.duedate.split(":"))
+                datetime(year, month, day, hour, minute)
+            except ValueError as error:
+                raise ValueError("--duedate requires 0 or a valid YYYY:MM:DD:HH:MM date") from error
+        if self.dry_run:
+            return
+        if not self.has_action():
+            raise ValueError(
+                "specify at least one change: --info, --duedate, --maxfiles, --visible or --exec"
+            )
+        if self.drafts is not None and not self.info:
+            raise ValueError("--lang requires --info")
+        if self.info and self.repo is None:
+            raise ValueError("--info requires --repo <local repository>")
+
+    def task_parameters(self) -> TaskParameters:
+        param = TaskParameters()
+        param.duedate = self.duedate
+        param.maxfiles = self.maxfiles
+        param.info = self.info
+        param.exec = self.exec_
+        if self.visible is not None:
+            param.visible = self.visible == 1
+        return param
+
 
 class Update:
-
     @staticmethod
-    def any_action(args: argparse.Namespace):
-        if args.info:
-            return True
-        if args.drafts is not None:
-            return True
-        if args.duedate is not None:
-            return True
-        if args.maxfiles is not None:
-            return True
-        if args.visible is not None:
-            return True
-        if args.exec:
-            return True
-        return False
-
-    @staticmethod
-    def load_tasks_from_follow(follow: str, param: TaskParameters):        
-        task_list: list[Task] = []
-        if not os.path.exists(follow):
-            print("Persistence file not found")
-            return task_list
-        try:
-            lines = open(follow).read().splitlines()
-            for line in lines:
-                task = Task()
-                task.rebuild(line)
-                task.set_param(param)
-                task_list.append(task)
-        except Exception as e:
-            print("Error reading persistence file", follow)
-            print(e)
-        return task_list
-
-    @staticmethod
-    def create_persistence_file(create: str, drafts: str | None, task_list: list[Task], param: TaskParameters):
-        for task in task_list:
-            task.set_drafts(drafts)
-            task.set_param(param)
-            task.set_status(Task.TODO)
-        open(create, "w").write("\n".join([x.serialize() for x in task_list]))
-
-    @staticmethod
-    def execute(n_threads: int | None, task_list: list[Task], structure: Structure, follow: str | None):
-        lock = threading.Lock()
-        
-
-        def worker(task: Task):
-            if task.status == Task.DONE or task.status == Task.SKIP:
-                
-                return
-            if n_threads == 1:
-                print(Text.format("{y}", "- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title)))
-            else:
-                log_file: str = os.path.join(".log", str(task.id))
-                if not os.path.exists(".log"):
-                    os.mkdir(".log")
-                task.set_log(Log(log_file))
-                print("- Start " + str(task.id) + ": " + str(task.label) + " - " + str(task.title) + " with log file: " + log_file)
-            add = Publish(task).set_structure(structure)
-            add.execute()
-
-            print("- Finish " + str(task.label))
-            if follow is not None:
-                with lock:
-                    with open(follow, "w") as f:
-                        f.write("\n".join([x.serialize() for x in task_list]) + "\n")
-        with ThreadPoolExecutor(max_workers=n_threads) as executor:
-            executor.map(worker, task_list)
-
-    @staticmethod
-    def validate_args(args: argparse.Namespace):
-        if args.info:
-            if args.remote is None and args.folder is None:
-                print("--info requires a source")
-                print("you must set remote database OR local folder")
-                print("use --remote fup | ed | poo")
-                print("or  --folder <local base folder>")
-                return False
-
-        if args.course is None:
-            print(Text().addf("y", "course index not defined"))
-            print(Text().addf("y", "use --course <course id>"))
-            return False
-        
-        if not Update.any_action(args):
-            print(Text().addf("y", "Nothing to update, please provide at least one action(--info, --duedate, --visible, ..."))
-            return False
-                
-        if args.drafts is not None and args.info is None:
-            print(Text().addf("y", "Drafts only available with --info"))
-            return False
-
-        if args.follow is None:
-            if not args.all and (args.section is None and args.id is None and args.label is None):
-                print(Text().addf("y", "You must provide at least one target [--all | --section ... | --id ... | --label ...]"))
-                return False
-        
-        
-        return True
-
-    @staticmethod
-    def update(args: argparse.Namespace):
-        if not Update.validate_args(args):
+    def update(options: UpdateOptions) -> None:
+        options.validate()
+        credentials = Credentials.load_credentials()
+        credentials.repo_path = options.repo
+        credentials.set_course(options.course)
+        structure = StructureLoader.load()
+        tasks = Update.load_itens_from_structure(
+            options.all_, options.sections, options.ids, options.labels, structure,
+        )
+        if not tasks:
+            print("No activities matched the selection. Check the course with mula list -c <course>.")
+            return
+        if options.dry_run:
+            Update.print_dry_run(tasks, structure)
             return
 
-        credentials = Credentials.load_credentials()
-        credentials.set_remote(args.remote)
-        credentials.folder_db = args.folder
-        credentials.set_course(args.course)
-
-        param = TaskParameters()
-        param.duedate = args.duedate
-        param.maxfiles = args.maxfiles
-        param.info = args.info
-        param.exec = args.exec
-
-        if args.visible is not None:
-            param.visible = True if args.visible == 1 else False
-
-        structure: Structure = StructureLoader.load()
-
-        task_list: list[Task] = []
-        if args.follow is not None:
-            task_list = Update.load_tasks_from_follow(args.follow, param)
-        else:
-            task_list = Update.load_itens_from_structure(args.all, args.section, args.id, args.label, structure)
-
-        follow: str | None = args.follow
-        # se mandou criar -> cria e para
-        # ou mandou rodar sem follow -> cria default e continua
-        if args.create is not None or args.follow is None:
-            if follow is None:
-                create: str = "follow.csv"
-                if args.create is not None:
-                    create = args.create
-                follow = create
-            else:
-                create = args.follow
-            Update.create_persistence_file(create, args.drafts, task_list, param)
-            if not args.create:
-                print("Default persistence file created: " + create)
-                print("Use --follow if you want to resume")
-            else:
-                print("Persistence file created: " + create)
-                print("Use --follow to continue")
-                return
-        n_threads: int = args.threads if args.threads is not None else 1
-
-         #se vc fornecesse uam label inexistente ele nao falava nada, perdi mt tempo nisso =(
-        if(len(task_list) == 0):
-            raise RuntimeError(f"****No labels found. Please check the arguments****")
-        
-        Update.execute(n_threads, task_list, structure, follow)
+        # Store the resolved ID and an absolute path, independent of aliases and cwd.
+        options.course = credentials.get_course()
+        if options.repo is not None:
+            options.repo = str(Path(options.repo).resolve())
+            credentials.repo_path = options.repo
+        param = options.task_parameters()
+        for task in tasks:
+            task.set_param(param).set_drafts(options.drafts).set_status(Task.TODO)
+        state = OperationState(options, credentials.url, MoodleAPI.default_timeout, tasks)
+        state.save()
+        state.open_in_vscode()
+        PublishWorkflow.execute(state, structure)
 
     @staticmethod
-    def load_itens_from_structure(args_all: bool, args_section: list[int], args_ids: list[int], args_labels: list[str], structure: Structure):
+    def print_dry_run(task_list: list[Task], structure: Structure) -> None:
+        pending = [task for task in task_list if task.status not in (Task.DONE, Task.SKIP)]
+        print(f"Dry run: {len(pending)} activity/activities selected for update.")
+        for task in pending:
+            section = task.section
+            if 0 <= section < structure.get_number_of_sections():
+                section_name = structure.section_labels[section]
+            else:
+                section_name = "unknown section"
+            print(f"  ID {task.id} | Section {section}: {section_name} | {task.label} | {task.title}")
+        skipped = len(task_list) - len(pending)
+        if skipped:
+            print(f"Skipped {skipped} completed or skipped activity/activities.")
+
+    @staticmethod
+    def load_itens_from_structure(
+        args_all: bool, args_section: list[int] | None, args_ids: list[int] | None,
+        args_labels: list[str] | None, structure: Structure,
+    ) -> list[Task]:
         item_list: list[Task] = []
         if args_all:
             item_list = structure.get_itens()
         elif args_section and len(args_section) > 0:
             for section in args_section:
-                item_list += structure.get_itens(section)
+                if 0 <= section < structure.get_number_of_sections():
+                    item_list += structure.get_itens(section)
+                else:
+                    print(f"Section {section} is out of range (0-{structure.get_number_of_sections() - 1}).")
         elif args_ids:
             for qid in args_ids:
                 if structure.has_id(qid):
@@ -185,27 +151,4 @@ class Update:
         if args_labels:
             for label in args_labels:
                 item_list += [item for item in structure.get_itens() if item.label == label]
-            # print(item_list)
-        return item_list
-
-    @staticmethod
-    def exec_opt(item_list: list[Task], args_exec_options: bool):
-        i = 0
-        api = MoodleAPI()
-        log = Log()
-        while i < len(item_list):
-            item = item_list[i]
-            log.print("- Change execution options for " + str(item.id))
-            log.print("    -", str(item))
-            try:
-                log.open()
-                if args_exec_options:
-                    api.set_execution_options(item.id)
-
-                i += 1
-                log.done()
-            except Exception as _e:
-                api = MoodleAPI()
-                print(type(_e))  # debug
-                print(_e)
-                log.fail(": timeout")
+        return list({item.id: item for item in item_list}.values())

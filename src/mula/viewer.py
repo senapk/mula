@@ -11,6 +11,9 @@ class Viewer:
         self.topic_only = topic_only
 
     def list_section(self, index: int):
+        if index < 0 or index >= self.structure.get_number_of_sections():
+            last = self.structure.get_number_of_sections() - 1
+            raise ValueError(f"Section {index} is out of range; valid section indices are 0 through {last}.")
         print("- %02d. %s" % (index, self.structure.section_labels[index]))
         if self.topic_only:
             return
